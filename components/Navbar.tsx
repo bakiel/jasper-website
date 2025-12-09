@@ -243,7 +243,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLaunchMethodology, onOpenServi
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-4 lg:gap-6 relative z-10 ml-auto lg:ml-8">
-              <a href="#" className="hidden lg:block text-[10px] font-bold text-gray-400 hover:text-white transition-colors tracking-widest uppercase hover:drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
+              <a href="/login" className="hidden lg:block text-[10px] font-bold text-gray-400 hover:text-white transition-colors tracking-widest uppercase hover:drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
                 Login
               </a>
               <Button 
@@ -379,9 +379,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLaunchMethodology, onOpenServi
                   START PROJECT <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
                 <div className="flex justify-center gap-8 text-sm font-medium text-brand-muted uppercase tracking-widest">
-                    <a href="#" className="hover:text-white transition-colors">Login</a>
+                    <a href="/login" className="hover:text-white transition-colors">Login</a>
                     <span className="text-white/10">|</span>
-                    <a href="#" className="hover:text-white transition-colors">Support</a>
+                    <a href="/contact" className="hover:text-white transition-colors">Support</a>
                 </div>
             </div>
 
