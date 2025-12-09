@@ -7,6 +7,8 @@ import ContactPage from './app/contact/page';
 import FAQPage from './app/faq/page';
 import TermsPage from './app/terms/page';
 import NotFoundPage from './app/404/page';
+import LoginPage from './app/login/page';
+import PortalPage from './app/portal/page';
 import { SectorPage } from './components/SectorPage';
 
 // Simple Route Types
@@ -17,6 +19,8 @@ type Route =
   | { path: 'contact' }
   | { path: 'faq' }
   | { path: 'terms' }
+  | { path: 'login' }
+  | { path: 'portal' }
   | { path: 'sector-detail'; slug: string }
   | { path: '404' };
 
@@ -41,6 +45,10 @@ const App: React.FC = () => {
       return { path: 'faq' };
     } else if (cleanPath === '/terms') {
       return { path: 'terms' };
+    } else if (cleanPath === '/login') {
+      return { path: 'login' };
+    } else if (cleanPath === '/portal') {
+      return { path: 'portal' };
     } else if (cleanPath.startsWith('/sectors/')) {
       const parts = cleanPath.split('/');
       // Expected format: ["", "sectors", "slug"]
@@ -122,6 +130,18 @@ const App: React.FC = () => {
         <TermsPage
             key="terms"
             onNavigate={navigate}
+        />
+      )}
+
+      {route.path === 'login' && (
+        <LoginPage
+            key="login"
+        />
+      )}
+
+      {route.path === 'portal' && (
+        <PortalPage
+            key="portal"
         />
       )}
 
