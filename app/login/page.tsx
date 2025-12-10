@@ -1,4 +1,7 @@
+'use client';
+
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   Mail,
@@ -118,8 +121,14 @@ export default function LoginPage() {
         >
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-emerald to-brand-glow flex items-center justify-center">
-              <span className="text-white font-bold text-lg">J</span>
+            <div className="w-12 h-12 relative flex-shrink-0">
+              <Image
+                src="/images/jasper-icon.png"
+                alt="JASPER"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
             <div>
               <h1 className="text-white font-bold text-xl">JASPER</h1>
