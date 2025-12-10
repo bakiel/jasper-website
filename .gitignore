@@ -1,5 +1,95 @@
+# Dependencies
 node_modules
-.vercel
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.venv/
+env/
+ENV/
+
+# Environment files - CRITICAL: Never commit secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-*
+
+# OS
 .DS_Store
-dist
-jasper-api
+Thumbs.db
+*.log
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Vercel
+.vercel
+
+# Secrets and certificates - NEVER COMMIT
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+credentials.json
+secrets.yml
+secrets.yaml
+*_secret*
+*_key*
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Test artifacts
+.pytest_cache/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Generated docs
+docs/_build/
+
+# Package locks (optional - some projects track these)
+# package-lock.json
+# yarn.lock
+
+# Project specific
+jasper-api/.env*
+jasper-portal/.env
+jasper-portal-frontend/.env*
