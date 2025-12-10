@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     # Frontend URL for magic links
     FRONTEND_URL: str = "https://portal.jasperfinance.org"
 
+    # Google OAuth (for admin login)
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
     # AI Integration (OpenRouter) - Per JASPER Model Strategy Docs
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
@@ -85,6 +89,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"  # Allow extra environment variables
 
 
 class DesignSystem:

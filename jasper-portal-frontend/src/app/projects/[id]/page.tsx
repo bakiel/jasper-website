@@ -1,0 +1,653 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Header } from '@/components/layout'
+import { DocumentManager } from '@/components/documents'
+import { MessageCenter } from '@/components/messages'
+import {
+  ArrowLeft,
+  Calendar,
+  DollarSign,
+  Building2,
+  Clock,
+  CheckCircle2,
+  Circle,
+  Edit,
+  FileText,
+  Send,
+  MoreHorizontal,
+  ChevronRight,
+  Loader2,
+  FolderOpen,
+  MessageSquare,
+} from 'lucide-react'
+import { formatCurrency, formatDate, formatStage, formatPackage, getStageColor, cn } from '@/lib/utils'
+import { projectsApi, documentsApi, DocumentData } from '@/lib/api'
+
+// Pipeline stages in order
+const PIPELINE_STAGES = [
+  { key: 'inquiry', label: 'Inquiry' },
+  { key: 'qualify', label: 'Qualify' },
+  { key: 'intake', label: 'Intake' },
+  { key: 'proposal', label: 'Proposal' },
+  { key: 'deposit', label: 'Deposit' },
+  { key: 'production', label: 'Production' },
+  { key: 'draft', label: 'Draft' },
+  { key: 'final', label: 'Final' },
+]
+
+interface Project {
+  id: number
+  reference: string
+  name: string
+  description?: string
+  company_id: number
+  company_name?: string
+  contact_id?: number
+  stage: string
+  package: string
+  value: number
+  currency: string
+  progress_percent: number
+  inquiry_date: string
+  start_date?: string
+  target_completion?: string
+  actual_completion?: string
+  revision_rounds_used: number
+  revision_rounds_total: number
+  project_sector?: string
+  project_location?: string
+  funding_amount?: number
+  target_dfis?: string[]
+  created_at: string
+  updated_at: string
+}
+
+interface Milestone {
+  id: number
+  name: string
+  order: number
+  due_date?: string
+  completed: boolean
+  completed_date?: string
+  description?: string
+  notes?: string
+}
+
+export default function ProjectDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const projectId = Number(params.id)
+
+  const [project, setProject] = useState<Project | null>(null)
+  const [milestones, setMilestones] = useState<Milestone[]>([])
+  const [documents, setDocuments] = useState<DocumentData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [advancingStage, setAdvancingStage] = useState(false)
+  const [updatingMilestone, setUpdatingMilestone] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'messages'>('overview')
+
+  const fetchData = async () => {
+    try {
+      const [projectData, milestonesData, documentsData] = await Promise.all([
+        projectsApi.get(projectId),
+        projectsApi.getMilestones(projectId).catch(() => []),
+        documentsApi.listByProject(projectId).catch(() => ({ documents: [], total: 0 })),
+      ])
+      setProject(projectData)
+      setMilestones(milestonesData || [])
+      setDocuments(documentsData.documents || [])
+    } catch (error) {
+      console.error('Failed to fetch project:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchDocuments = async () => {
+    try {
+      const data = await documentsApi.listByProject(projectId)
+      setDocuments(data.documents || [])
+    } catch (error) {
+      console.error('Failed to fetch documents:', error)
+    }
+  }
+
+  useEffect(() => {
+    if (projectId) fetchData()
+  }, [projectId])
+
+  const handleAdvanceStage = async () => {
+    if (!project) return
+    setAdvancingStage(true)
+    try {
+      const updated = await projectsApi.advanceStage(projectId)
+      setProject(updated)
+    } catch (error) {
+      console.error('Failed to advance stage:', error)
+    } finally {
+      setAdvancingStage(false)
+    }
+  }
+
+  const handleToggleMilestone = async (milestone: Milestone) => {
+    setUpdatingMilestone(milestone.id)
+    try {
+      const updated = await projectsApi.updateMilestone(projectId, milestone.id, {
+        completed: !milestone.completed,
+      })
+      setMilestones((prev) =>
+        prev.map((m) => (m.id === milestone.id ? updated : m))
+      )
+      // Refresh project to update progress
+      const projectData = await projectsApi.get(projectId)
+      setProject(projectData)
+    } catch (error) {
+      console.error('Failed to update milestone:', error)
+    } finally {
+      setUpdatingMilestone(null)
+    }
+  }
+
+  // Get current stage index for pipeline display
+  const currentStageIndex = project
+    ? PIPELINE_STAGES.findIndex((s) => s.key === project.stage)
+    : -1
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-surface-secondary flex items-center justify-center">
+        <div className="animate-pulse text-jasper-slate">Loading project...</div>
+      </div>
+    )
+  }
+
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-surface-secondary flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-jasper-slate mb-4">Project not found</p>
+          <Link href="/projects" className="btn-primary">
+            Back to Projects
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const completedMilestones = milestones.filter((m) => m.completed).length
+  const totalMilestones = milestones.length
+
+  return (
+    <div className="min-h-screen bg-surface-secondary">
+      <Header
+        title={project.reference}
+        subtitle={project.name}
+      />
+
+      <div className="p-6 space-y-6">
+        {/* Back Button */}
+        <Link
+          href="/projects"
+          className="inline-flex items-center gap-2 text-sm text-jasper-slate hover:text-jasper-carbon transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Projects
+        </Link>
+
+        {/* Pipeline Stage Tracker */}
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center justify-between overflow-x-auto pb-2">
+              {PIPELINE_STAGES.map((stage, index) => {
+                const isPast = index < currentStageIndex
+                const isCurrent = index === currentStageIndex
+                const isFuture = index > currentStageIndex
+
+                return (
+                  <div key={stage.key} className="flex items-center">
+                    <div className="flex flex-col items-center min-w-[80px]">
+                      <div
+                        className={cn(
+                          'w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all',
+                          isPast && 'bg-jasper-emerald text-white',
+                          isCurrent && 'bg-jasper-emerald text-white ring-4 ring-jasper-emerald/20',
+                          isFuture && 'bg-surface-tertiary text-jasper-slate'
+                        )}
+                      >
+                        {isPast ? (
+                          <CheckCircle2 className="w-4 h-4" />
+                        ) : (
+                          index + 1
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          'mt-2 text-xs font-medium whitespace-nowrap',
+                          isCurrent ? 'text-jasper-emerald' : 'text-jasper-slate'
+                        )}
+                      >
+                        {stage.label}
+                      </span>
+                    </div>
+                    {index < PIPELINE_STAGES.length - 1 && (
+                      <div
+                        className={cn(
+                          'w-12 h-0.5 mx-1',
+                          index < currentStageIndex ? 'bg-jasper-emerald' : 'bg-surface-tertiary'
+                        )}
+                      />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex gap-1 border-b border-border">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={cn(
+              'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
+              activeTab === 'overview'
+                ? 'border-jasper-emerald text-jasper-emerald'
+                : 'border-transparent text-jasper-slate hover:text-jasper-carbon'
+            )}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('documents')}
+            className={cn(
+              'px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2',
+              activeTab === 'documents'
+                ? 'border-jasper-emerald text-jasper-emerald'
+                : 'border-transparent text-jasper-slate hover:text-jasper-carbon'
+            )}
+          >
+            <FolderOpen className="w-4 h-4" />
+            Documents
+            {documents.length > 0 && (
+              <span className="badge badge-secondary text-xs">{documents.length}</span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={cn(
+              'px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2',
+              activeTab === 'messages'
+                ? 'border-jasper-emerald text-jasper-emerald'
+                : 'border-transparent text-jasper-slate hover:text-jasper-carbon'
+            )}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Messages
+          </button>
+        </div>
+
+        {/* Main Content - Overview Tab */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Project Details */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Overview Card */}
+              <div className="card">
+                <div className="card-header flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-jasper-carbon">Project Overview</h2>
+                  <div className="flex items-center gap-2">
+                    <span className={cn('badge text-sm', getStageColor(project.stage))}>
+                      {formatStage(project.stage)}
+                    </span>
+                    <button className="p-2 hover:bg-surface-secondary rounded-lg transition-colors">
+                      <Edit className="w-4 h-4 text-jasper-slate" />
+                    </button>
+                  </div>
+                </div>
+                <div className="card-body">
+                  {project.description && (
+                    <p className="text-jasper-slate mb-6">{project.description}</p>
+                  )}
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <InfoItem
+                      icon={DollarSign}
+                      label="Value"
+                      value={formatCurrency(project.value, project.currency)}
+                    />
+                    <InfoItem
+                      icon={Building2}
+                      label="Package"
+                      value={formatPackage(project.package)}
+                    />
+                    <InfoItem
+                      icon={Calendar}
+                      label="Target Date"
+                      value={project.target_completion ? formatDate(project.target_completion) : '-'}
+                    />
+                    <InfoItem
+                      icon={Clock}
+                      label="Revisions"
+                      value={`${project.revision_rounds_used}/${project.revision_rounds_total}`}
+                    />
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-jasper-carbon">Overall Progress</span>
+                      <span className="text-sm font-semibold text-jasper-emerald">
+                        {project.progress_percent}%
+                      </span>
+                    </div>
+                    <div className="h-3 bg-surface-tertiary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-jasper-emerald to-jasper-emerald-light rounded-full transition-all duration-700"
+                        style={{ width: `${project.progress_percent}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Milestones */}
+              <div className="card">
+                <div className="card-header flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-jasper-carbon">
+                    Milestones
+                    <span className="ml-2 text-sm font-normal text-jasper-slate">
+                      ({completedMilestones}/{totalMilestones} completed)
+                    </span>
+                  </h2>
+                </div>
+                <div className="divide-y divide-border">
+                  {milestones.length === 0 ? (
+                    <div className="p-6 text-center text-jasper-slate">
+                      No milestones defined yet
+                    </div>
+                  ) : (
+                    milestones.map((milestone, index) => (
+                      <div
+                        key={milestone.id}
+                        className={cn(
+                          'p-4 flex items-start gap-4 group transition-colors',
+                          milestone.completed && 'bg-surface-secondary/50'
+                        )}
+                      >
+                        <button
+                          onClick={() => handleToggleMilestone(milestone)}
+                          disabled={updatingMilestone === milestone.id}
+                          className="flex-shrink-0 mt-0.5 disabled:opacity-50"
+                        >
+                          {updatingMilestone === milestone.id ? (
+                            <Loader2 className="w-5 h-5 text-jasper-emerald animate-spin" />
+                          ) : milestone.completed ? (
+                            <CheckCircle2 className="w-5 h-5 text-jasper-emerald hover:text-jasper-emerald-dark transition-colors" />
+                          ) : (
+                            <Circle className="w-5 h-5 text-jasper-slate-light hover:text-jasper-emerald transition-colors" />
+                          )}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              'font-medium',
+                              milestone.completed ? 'text-jasper-slate line-through' : 'text-jasper-carbon'
+                            )}>
+                              {milestone.name}
+                            </span>
+                            <span className="text-xs text-jasper-slate-light">
+                              #{milestone.order}
+                            </span>
+                          </div>
+                          {milestone.description && (
+                            <p className="text-sm text-jasper-slate mt-1">{milestone.description}</p>
+                          )}
+                          <div className="flex items-center gap-4 mt-2 text-xs text-jasper-slate">
+                            {milestone.due_date && (
+                              <span className={cn(
+                                'flex items-center gap-1',
+                                !milestone.completed && new Date(milestone.due_date) < new Date() && 'text-red-500'
+                              )}>
+                                <Calendar className="w-3 h-3" />
+                                Due: {formatDate(milestone.due_date)}
+                                {!milestone.completed && new Date(milestone.due_date) < new Date() && ' (Overdue)'}
+                              </span>
+                            )}
+                            {milestone.completed_date && (
+                              <span className="flex items-center gap-1 text-jasper-emerald">
+                                <CheckCircle2 className="w-3 h-3" />
+                                Completed: {formatDate(milestone.completed_date)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Project Info */}
+              {(project.project_sector || project.project_location || project.funding_amount || project.target_dfis?.length) && (
+                <div className="card">
+                  <div className="card-header">
+                    <h2 className="text-lg font-semibold text-jasper-carbon">Project Details</h2>
+                  </div>
+                  <div className="card-body">
+                    <dl className="grid grid-cols-2 gap-4">
+                      {project.project_sector && (
+                        <div>
+                          <dt className="text-sm text-jasper-slate">Sector</dt>
+                          <dd className="font-medium text-jasper-carbon">{project.project_sector}</dd>
+                        </div>
+                      )}
+                      {project.project_location && (
+                        <div>
+                          <dt className="text-sm text-jasper-slate">Location</dt>
+                          <dd className="font-medium text-jasper-carbon">{project.project_location}</dd>
+                        </div>
+                      )}
+                      {project.funding_amount && (
+                        <div>
+                          <dt className="text-sm text-jasper-slate">Funding Target</dt>
+                          <dd className="font-medium text-jasper-carbon">
+                            {formatCurrency(project.funding_amount, project.currency)}
+                          </dd>
+                        </div>
+                      )}
+                      {project.target_dfis && project.target_dfis.length > 0 && (
+                        <div className="col-span-2">
+                          <dt className="text-sm text-jasper-slate mb-2">Target DFIs</dt>
+                          <dd className="flex flex-wrap gap-2">
+                            {project.target_dfis.map((dfi) => (
+                              <span key={dfi} className="badge badge-info">
+                                {dfi}
+                              </span>
+                            ))}
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Actions & Timeline */}
+            <div className="space-y-6">
+              {/* Quick Actions */}
+              <div className="card">
+                <div className="card-header">
+                  <h3 className="font-semibold text-jasper-carbon">Quick Actions</h3>
+                </div>
+                <div className="card-body space-y-2">
+                  <button
+                    onClick={handleAdvanceStage}
+                    disabled={advancingStage || project.stage === 'final'}
+                    className="btn-primary w-full justify-start disabled:opacity-50"
+                  >
+                    {advancingStage ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                    {advancingStage ? 'Advancing...' : project.stage === 'final' ? 'Project Complete' : 'Advance Stage'}
+                  </button>
+                  <button className="btn-secondary w-full justify-start">
+                    <FileText className="w-4 h-4" />
+                    Create Invoice
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('documents')}
+                    className="btn-ghost w-full justify-start"
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    Manage Documents
+                  </button>
+                  <button className="btn-ghost w-full justify-start">
+                    <Edit className="w-4 h-4" />
+                    Edit Project
+                  </button>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="card">
+                <div className="card-header">
+                  <h3 className="font-semibold text-jasper-carbon">Timeline</h3>
+                </div>
+                <div className="card-body">
+                  <div className="space-y-4">
+                    <TimelineItem
+                      label="Inquiry Date"
+                      date={project.inquiry_date}
+                      completed
+                    />
+                    {project.start_date && (
+                      <TimelineItem
+                        label="Start Date"
+                        date={project.start_date}
+                        completed
+                      />
+                    )}
+                    {project.target_completion && (
+                      <TimelineItem
+                        label="Target Completion"
+                        date={project.target_completion}
+                        completed={!!project.actual_completion}
+                      />
+                    )}
+                    {project.actual_completion && (
+                      <TimelineItem
+                        label="Actual Completion"
+                        date={project.actual_completion}
+                        completed
+                        highlight
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Meta Info */}
+              <div className="card">
+                <div className="card-body text-sm text-jasper-slate space-y-2">
+                  <div className="flex justify-between">
+                    <span>Created</span>
+                    <span className="text-jasper-carbon">{formatDate(project.created_at)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Last Updated</span>
+                    <span className="text-jasper-carbon">{formatDate(project.updated_at)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Project ID</span>
+                    <span className="font-mono text-jasper-carbon">#{project.id}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Documents Tab */}
+        {activeTab === 'documents' && (
+          <DocumentManager
+            projectId={projectId}
+            documents={documents}
+            onDocumentsChange={fetchDocuments}
+            isAdmin={true}
+          />
+        )}
+
+        {/* Messages Tab */}
+        {activeTab === 'messages' && project && (
+          <div className="h-[600px]">
+            <MessageCenter
+              companyId={project.company_id}
+              companyName={project.company_name}
+              projectId={projectId}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function InfoItem({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: any
+  label: string
+  value: string
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-10 h-10 rounded-lg bg-surface-secondary flex items-center justify-center flex-shrink-0">
+        <Icon className="w-5 h-5 text-jasper-emerald" />
+      </div>
+      <div>
+        <p className="text-xs text-jasper-slate">{label}</p>
+        <p className="font-medium text-jasper-carbon">{value}</p>
+      </div>
+    </div>
+  )
+}
+
+function TimelineItem({
+  label,
+  date,
+  completed,
+  highlight,
+}: {
+  label: string
+  date: string
+  completed?: boolean
+  highlight?: boolean
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        className={cn(
+          'w-3 h-3 rounded-full',
+          completed ? (highlight ? 'bg-jasper-emerald' : 'bg-jasper-slate') : 'bg-surface-tertiary border-2 border-jasper-slate-light'
+        )}
+      />
+      <div className="flex-1">
+        <p className="text-sm text-jasper-slate">{label}</p>
+        <p className={cn(
+          'font-medium',
+          highlight ? 'text-jasper-emerald' : 'text-jasper-carbon'
+        )}>
+          {formatDate(date)}
+        </p>
+      </div>
+    </div>
+  )
+}

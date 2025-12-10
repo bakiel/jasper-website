@@ -17,7 +17,7 @@ from app.core.security import (
     RateLimitMiddleware,
 )
 from app.models.base import init_db
-from app.api import auth, clients, projects, invoices, proposals, documents, admin, webhooks
+from app.api import auth, clients, projects, invoices, proposals, documents, admin, webhooks, admin_auth, questionnaire, messages
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -181,6 +181,24 @@ app.include_router(
     webhooks.router,
     prefix=f"{settings.API_V1_PREFIX}/webhooks",
     tags=["Webhooks"]
+)
+
+app.include_router(
+    admin_auth.router,
+    prefix=f"{settings.API_V1_PREFIX}/admin/auth",
+    tags=["Admin Authentication"]
+)
+
+app.include_router(
+    questionnaire.router,
+    prefix=f"{settings.API_V1_PREFIX}/questionnaire",
+    tags=["Client Questionnaire"]
+)
+
+app.include_router(
+    messages.router,
+    prefix=f"{settings.API_V1_PREFIX}/messages",
+    tags=["Messages"]
 )
 
 
