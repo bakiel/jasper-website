@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { QueryProvider } from '@/lib/query-client'
 import { AuthProvider, useAuth } from '@/lib/auth-context'
+import { ThemeProvider } from '@/lib/theme-context'
 import { Sidebar } from './Sidebar'
 import { IntakeQuestionnaireModal } from '../questionnaire/IntakeQuestionnaireModal'
 import { questionnaireApi } from '@/lib/api'
@@ -93,10 +94,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
 export function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
-    <QueryProvider>
-      <AuthProvider>
-        <LayoutContent>{children}</LayoutContent>
-      </AuthProvider>
-    </QueryProvider>
+    <ThemeProvider>
+      <QueryProvider>
+        <AuthProvider>
+          <LayoutContent>{children}</LayoutContent>
+        </AuthProvider>
+      </QueryProvider>
+    </ThemeProvider>
   )
 }

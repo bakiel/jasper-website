@@ -41,7 +41,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-white border-r border-border transition-all duration-300',
+        'fixed left-0 top-0 z-40 h-screen bg-surface-primary border-r border-border transition-all duration-300',
         collapsed ? 'w-20' : 'w-64'
       )}
     >
@@ -148,7 +148,7 @@ export function Sidebar() {
         {/* Collapse Button */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-20 w-6 h-6 bg-white border border-border rounded-full flex items-center justify-center shadow-sm hover:bg-surface-secondary transition-colors"
+          className="absolute -right-3 top-20 w-6 h-6 bg-surface-primary border border-border rounded-full flex items-center justify-center shadow-sm hover:bg-surface-secondary transition-colors"
         >
           {collapsed ? (
             <ChevronRight className="w-4 h-4 text-jasper-slate" />
