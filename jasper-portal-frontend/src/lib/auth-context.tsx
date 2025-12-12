@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { adminAuthApi, AdminUser } from './api'
 
@@ -19,56 +19,52 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 // Routes that don't require authentication
 const publicRoutes = ['/login', '/intake']
 
+// Global flag to prevent multiple auth checks across component remounts
+let globalAuthChecked = false
+let globalIsLoggingIn = false
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AdminUser | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<AdminUser | null>(() => {
+    // Initialize from localStorage immediately to prevent flash
+    if (typeof window !== 'undefined') {
+      return adminAuthApi.getCurrentUser()
+    }
+    return null
+  })
+  const [isLoading, setIsLoading] = useState(() => {
+    // If we already have a user from localStorage, don't show loading
+    if (typeof window !== 'undefined' && adminAuthApi.getCurrentUser()) {
+      return false
+    }
+    return true
+  })
+
   const router = useRouter()
   const pathname = usePathname()
-
-  // Use ref to track login state without triggering re-renders
-  const isLoggingInRef = useRef(false)
-  const hasCheckedAuthRef = useRef(false)
 
   // Check authentication status on mount only
   useEffect(() => {
     const checkAuth = async () => {
-      // Skip if already checked or currently logging in
-      if (hasCheckedAuthRef.current || isLoggingInRef.current) {
+      // Skip if already checked globally or currently logging in
+      if (globalAuthChecked || globalIsLoggingIn) {
+        // Still update local state from localStorage
+        const cachedUser = adminAuthApi.getCurrentUser()
+        if (cachedUser && adminAuthApi.isAuthenticated()) {
+          setUser(cachedUser)
+        }
         setIsLoading(false)
         return
       }
 
-      hasCheckedAuthRef.current = true
+      globalAuthChecked = true
 
       try {
-        // First check localStorage for cached user
         const cachedUser = adminAuthApi.getCurrentUser()
 
         if (cachedUser && adminAuthApi.isAuthenticated()) {
-          // Trust the cached user - no need to immediately verify
-          // This prevents the race condition where verification fails during login redirect
           setUser(cachedUser)
           setIsLoading(false)
-
-          // Verify token in background (non-blocking) - only after a delay
-          // This gives time for any login process to complete
-          setTimeout(async () => {
-            // Don't verify if we're in the middle of logging in
-            if (isLoggingInRef.current) return
-
-            try {
-              const freshUser = await adminAuthApi.getMe()
-              setUser(freshUser)
-              localStorage.setItem('admin_user', JSON.stringify(freshUser))
-            } catch (err) {
-              console.error('Background token verification failed:', err)
-              // Only logout if we're not currently logging in
-              if (!isLoggingInRef.current) {
-                adminAuthApi.logout()
-                setUser(null)
-              }
-            }
-          }, 1000) // Wait 1 second before background verification
+          // No background verification - trust localStorage
           return
         } else {
           setUser(null)
@@ -82,74 +78,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     checkAuth()
-  }, []) // Empty dependency - only run on mount
+  }, [])
 
-  // Handle route protection
+  // Handle route protection - only redirect, don't cause loops
   useEffect(() => {
-    if (!isLoading) {
-      const isPublicRoute = publicRoutes.some(route => pathname === route)
+    // Don't do anything while loading or logging in
+    if (isLoading || globalIsLoggingIn) return
 
-      if (!user && !isPublicRoute) {
-        // Not authenticated and trying to access protected route
-        router.push('/login')
-      } else if (user && pathname === '/login') {
-        // Authenticated but on login page - redirect to dashboard
-        router.push('/')
-      }
+    const isPublicRoute = publicRoutes.some(route => pathname === route)
+
+    if (!user && !isPublicRoute) {
+      // Not authenticated and trying to access protected route
+      router.replace('/login')
+    } else if (user && pathname === '/login') {
+      // Authenticated but on login page - redirect to dashboard
+      router.replace('/')
     }
   }, [user, isLoading, pathname, router])
 
-  const login = async (email: string, password: string) => {
-    isLoggingInRef.current = true
+  const login = useCallback(async (email: string, password: string) => {
+    globalIsLoggingIn = true
     try {
       const response = await adminAuthApi.login(email, password)
       setUser(response.user)
-      // Two-step flow: wait for localStorage to be fully processed before redirect
-      await new Promise(resolve => setTimeout(resolve, 150))
-      router.push('/')
-    } finally {
-      // Reset after navigation completes
-      setTimeout(() => {
-        isLoggingInRef.current = false
-      }, 2000)
+      // Hard navigation to ensure fresh page load with auth state
+      window.location.href = '/'
+    } catch (error) {
+      globalIsLoggingIn = false
+      throw error
     }
-  }
+  }, [])
 
-  const googleLogin = async (credential: string) => {
-    isLoggingInRef.current = true
+  const googleLogin = useCallback(async (credential: string) => {
+    globalIsLoggingIn = true
     try {
       const response = await adminAuthApi.googleLogin(credential)
       setUser(response.user)
-      // Two-step flow: wait for localStorage to be fully processed before redirect
-      // This prevents cookie race condition where redirect happens before storage is available
-      await new Promise(resolve => setTimeout(resolve, 150))
-      router.push('/')
-    } finally {
-      setTimeout(() => {
-        isLoggingInRef.current = false
-      }, 2000)
+      // Hard navigation to ensure fresh page load with auth state
+      window.location.href = '/'
+    } catch (error) {
+      globalIsLoggingIn = false
+      throw error
     }
-  }
+  }, [])
 
-  const linkedinLogin = async (code: string, redirectUri: string) => {
-    isLoggingInRef.current = true
+  const linkedinLogin = useCallback(async (code: string, redirectUri: string) => {
+    globalIsLoggingIn = true
     try {
       const response = await adminAuthApi.linkedinLogin(code, redirectUri)
       setUser(response.user)
-      // Two-step flow: wait for localStorage to be fully processed before redirect
-      await new Promise(resolve => setTimeout(resolve, 150))
-      router.push('/')
-    } finally {
-      setTimeout(() => {
-        isLoggingInRef.current = false
-      }, 2000)
+      // Hard navigation to ensure fresh page load with auth state
+      window.location.href = '/'
+    } catch (error) {
+      globalIsLoggingIn = false
+      throw error
     }
-  }
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
+    globalAuthChecked = false
+    globalIsLoggingIn = false
     setUser(null)
-    adminAuthApi.logout()
-  }
+    localStorage.removeItem('admin_token')
+    localStorage.removeItem('admin_user')
+    router.replace('/login')
+  }, [router])
 
   return (
     <AuthContext.Provider
