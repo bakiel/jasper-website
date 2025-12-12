@@ -1,0 +1,25 @@
+# JASPER CRM - Python Dependencies
+
+# Web Framework
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+
+# Database
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# Validation
+pydantic[email]==2.6.1
+
+# HTTP Client
+httpx==0.26.0
+
+# Environment
+python-dotenv==1.0.1
+
+# Security
+python-multipart==0.0.9
+
+# Production Server
+gunicorn==21.2.0

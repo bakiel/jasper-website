@@ -1,0 +1,12 @@
+from .settings import (
+    settings,
+    COLLECTIONS,
+    COMPLETION_MODELS,
+    VISION_ROUTING,
+    RATE_LIMITS,
+    EMBEDDING_DIMENSIONS,
+    BASE_DIR,
+    DATA_DIR,
+    MILVUS_DIR,
+    KNOWLEDGE_DIR,
+)

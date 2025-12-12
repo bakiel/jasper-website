@@ -89,7 +89,7 @@
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 px-5 py-3
-           bg-white text-jasper-carbon font-medium text-sm
+           bg-surface-primary text-jasper-carbon font-medium text-sm
            border border-border rounded-lg transition-all duration-200
            hover:bg-surface-secondary hover:border-border-dark
            focus:outline-none focus:ring-2 focus:ring-jasper-emerald focus:ring-offset-2
@@ -224,13 +224,37 @@
   /* Sidebar Navigation */
   .nav-item {
     @apply flex items-center gap-3 px-4 py-3 text-sm font-medium
-           text-jasper-slate rounded-lg transition-all duration-200
-           hover:bg-jasper-navy/5 hover:text-jasper-navy;
+           text-jasper-slate rounded-lg transition-all duration-200;
+  }
+
+  .nav-item:hover {
+    background-color: rgba(15, 42, 60, 0.05);
+    color: var(--jasper-navy);
+  }
+
+  .dark .nav-item:hover {
+    background-color: rgba(30, 58, 76, 0.2);
+    color: var(--jasper-carbon);
   }
 
   .nav-item-active {
-    @apply bg-jasper-emerald/10 text-jasper-emerald
-           hover:bg-jasper-emerald/15 hover:text-jasper-emerald;
+    background-color: rgba(44, 138, 91, 0.1);
+    color: var(--jasper-emerald);
+  }
+
+  .nav-item-active:hover {
+    background-color: rgba(44, 138, 91, 0.15);
+    color: var(--jasper-emerald);
+  }
+
+  .dark .nav-item-active {
+    background-color: rgba(61, 168, 114, 0.15);
+    color: var(--jasper-emerald);
+  }
+
+  .dark .nav-item-active:hover {
+    background-color: rgba(61, 168, 114, 0.2);
+    color: var(--jasper-emerald);
   }
 
   /* Stats Card */
@@ -280,4 +304,48 @@
   .animate-slide-up {
     animation: slideUp 0.3s ease-out forwards;
   }
+}
+
+/* Dark mode overrides for hardcoded colors */
+.dark .bg-white {
+  background-color: var(--surface-primary) !important;
+}
+
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 {
+  color: var(--jasper-carbon) !important;
+}
+
+.dark .text-gray-600,
+.dark .text-gray-500 {
+  color: var(--jasper-slate) !important;
+}
+
+.dark .text-gray-400,
+.dark .text-gray-300 {
+  color: var(--jasper-slate-light) !important;
+}
+
+.dark .border-gray-200,
+.dark .border-gray-100 {
+  border-color: var(--border-default) !important;
+}
+
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+  background-color: var(--surface-secondary) !important;
+}
+
+.dark .bg-gray-200 {
+  background-color: var(--surface-tertiary) !important;
+}
+
+.dark .ring-offset-white {
+  --tw-ring-offset-color: var(--surface-primary);
+}
+
+/* Dark mode hover state overrides */
+.dark .hover\:bg-gray-100:hover {
+  background-color: var(--surface-secondary) !important;
 }

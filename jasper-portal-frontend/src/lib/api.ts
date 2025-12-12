@@ -1,3 +1,6 @@
+import { getCSRFHeaders, requiresCSRFProtection, clearCSRFToken } from './csrf'
+import { canMakeRequest, recordRequest, handle429Response, RateLimitError, clearRateLimitState } from './rate-limit'
+
 const API_BASE = '/api/v1'
 
 // Get auth token from localStorage
@@ -7,7 +10,17 @@ function getAuthToken(): string | null {
 }
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  // Check rate limiting before making request
+  if (!canMakeRequest(endpoint)) {
+    throw new RateLimitError(
+      'Too many requests. Please wait a moment before trying again.',
+      5000
+    )
+  }
+
   const token = getAuthToken()
+  const method = options?.method || 'GET'
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
@@ -18,19 +31,37 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     headers['Authorization'] = `Bearer ${token}`
   }
 
+  // Add CSRF token for state-changing requests
+  if (requiresCSRFProtection(method)) {
+    const csrfHeaders = getCSRFHeaders()
+    Object.assign(headers, csrfHeaders)
+  }
+
+  // Record the request for rate limiting
+  recordRequest(endpoint)
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers,
     ...options,
   })
 
   if (!response.ok) {
-    // Handle 401 - clear token and redirect to login
+    // Handle 429 - Too Many Requests
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After')
+      const waitTime = handle429Response(endpoint, retryAfter)
+      throw new RateLimitError(
+        `Too many requests. Please wait ${Math.ceil(waitTime / 1000)} seconds.`,
+        waitTime
+      )
+    }
+
+    // Handle 401 - just clear token, let auth context handle redirect
+    // This prevents double redirects when getMe() fails during auth check
     if (response.status === 401) {
       localStorage.removeItem('admin_token')
       localStorage.removeItem('admin_user')
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        window.location.href = '/login'
-      }
+      // Don't redirect here - let auth context handle it
     }
     const error = await response.json().catch(() => ({ message: 'Request failed' }))
     throw new Error(error.detail || error.message || 'Request failed')
@@ -187,7 +218,10 @@ export const documentsApi = {
 
   upload: async (formData: FormData) => {
     const token = getAuthToken()
-    const headers: HeadersInit = {}
+    const csrfHeaders = getCSRFHeaders()
+    const headers: HeadersInit = {
+      ...csrfHeaders,
+    }
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
     }
@@ -345,9 +379,43 @@ export const adminAuthApi = {
     return data.client_id
   },
 
+  linkedinLogin: async (code: string, redirectUri: string): Promise<LoginResponse> => {
+    // LinkedIn endpoint - vercel.json rewrites to /api/admin/auth/google
+    const response = await fetch(`${API_BASE}/admin/auth/linkedin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'linkedin', code, redirect_uri: redirectUri }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'LinkedIn login failed' }))
+      const errorMsg = error.error ? `${error.detail}: ${error.error}` : error.detail
+      throw new Error(errorMsg || 'LinkedIn authentication failed')
+    }
+
+    const data: LoginResponse = await response.json()
+
+    // Store token and user data
+    localStorage.setItem('admin_token', data.access_token)
+    localStorage.setItem('admin_user', JSON.stringify(data.user))
+
+    return data
+  },
+
+  getLinkedInConfig: async (): Promise<{ client_id: string; redirect_uri: string; scope: string }> => {
+    // LinkedIn config - vercel.json rewrites /admin/auth/linkedin/client-id to /api/admin/auth/client-id?provider=linkedin
+    const response = await fetch(`${API_BASE}/admin/auth/linkedin/client-id`)
+    if (!response.ok) {
+      throw new Error('LinkedIn OAuth not configured')
+    }
+    return response.json()
+  },
+
   logout: () => {
     localStorage.removeItem('admin_token')
     localStorage.removeItem('admin_user')
+    clearCSRFToken()
+    clearRateLimitState()
     window.location.href = '/login'
   },
 
@@ -452,3 +520,6 @@ export const messagesApi = {
   markAllAsRead: (companyId: number) =>
     fetchApi<{ success: boolean }>(`/messages/company/${companyId}/read-all`, { method: 'PATCH' }),
 }
+
+// Re-export RateLimitError for use in components
+export { RateLimitError } from './rate-limit'

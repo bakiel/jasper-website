@@ -10,7 +10,7 @@ import { IntakeQuestionnaireModal } from '../questionnaire/IntakeQuestionnaireMo
 import { questionnaireApi } from '@/lib/api'
 
 // Routes that don't show the sidebar/dashboard chrome
-const publicRoutes = ['/login']
+const publicRoutes = ['/login', '/intake']
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -79,7 +79,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <main className="flex-1 ml-64 transition-all duration-300">
+      {/* Main content: No margin on mobile (full width), ml-64 on desktop */}
+      <main className="flex-1 ml-0 lg:ml-64 transition-all duration-300 pt-14 lg:pt-0">
         {children}
       </main>
 

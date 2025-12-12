@@ -20,9 +20,12 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { formatCurrency, getInitials, cn } from '@/lib/utils'
+import { sanitizeInput, sanitizeURL, isValidEmail, isValidPhone, truncate, INPUT_LIMITS } from '@/lib/sanitize'
 import { useCompanies } from '@/hooks/use-queries'
 import { companiesApi, CompanyCreateData } from '@/lib/api'
 import { useQueryClient } from '@tanstack/react-query'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { SkeletonGrid } from '@/components/ui/Skeleton'
 
 interface Company {
   id: number
@@ -175,24 +178,60 @@ export default function ClientsPage() {
     setCreateError(null)
 
     try {
+      // Validate required fields
+      if (!formData.companyName.trim()) {
+        throw new Error('Company name is required')
+      }
+      if (!formData.contactFirstName.trim() || !formData.contactLastName.trim()) {
+        throw new Error('Contact first and last name are required')
+      }
+      if (!formData.contactEmail.trim()) {
+        throw new Error('Contact email is required')
+      }
+
+      // Validate email format
+      if (!isValidEmail(formData.contactEmail)) {
+        throw new Error('Please enter a valid email address')
+      }
+      if (formData.companyEmail && !isValidEmail(formData.companyEmail)) {
+        throw new Error('Please enter a valid company email address')
+      }
+
+      // Validate phone formats
+      if (formData.contactPhone && !isValidPhone(formData.contactPhone)) {
+        throw new Error('Please enter a valid contact phone number')
+      }
+      if (formData.companyPhone && !isValidPhone(formData.companyPhone)) {
+        throw new Error('Please enter a valid company phone number')
+      }
+
+      // Validate input lengths
+      if (formData.companyName.length > INPUT_LIMITS.name) {
+        throw new Error(`Company name must be ${INPUT_LIMITS.name} characters or less`)
+      }
+      if (formData.notes && formData.notes.length > INPUT_LIMITS.notes) {
+        throw new Error(`Notes must be ${INPUT_LIMITS.notes} characters or less`)
+      }
+
+      // Sanitize all text inputs before sending to API
       const payload: CompanyCreateData = {
-        name: formData.companyName,
-        trading_name: formData.tradingName || undefined,
+        name: truncate(sanitizeInput(formData.companyName), INPUT_LIMITS.name),
+        trading_name: formData.tradingName ? truncate(sanitizeInput(formData.tradingName), INPUT_LIMITS.name) : undefined,
         industry: formData.industry,
-        country: formData.country,
-        city: formData.city || undefined,
-        website: formData.website || undefined,
-        phone: formData.companyPhone || undefined,
-        email: formData.companyEmail || undefined,
+        country: sanitizeInput(formData.country),
+        city: formData.city ? truncate(sanitizeInput(formData.city), INPUT_LIMITS.shortText) : undefined,
+        website: formData.website ? sanitizeURL(formData.website) : undefined,
+        phone: formData.companyPhone ? truncate(sanitizeInput(formData.companyPhone), INPUT_LIMITS.phone) : undefined,
+        email: formData.companyEmail ? formData.companyEmail.trim().toLowerCase() : undefined,
         lead_source: formData.leadSource || undefined,
-        referred_by: formData.referredBy || undefined,
-        notes: formData.notes || undefined,
+        referred_by: formData.referredBy ? truncate(sanitizeInput(formData.referredBy), INPUT_LIMITS.name) : undefined,
+        notes: formData.notes ? truncate(sanitizeInput(formData.notes), INPUT_LIMITS.notes) : undefined,
         primary_contact: {
-          first_name: formData.contactFirstName,
-          last_name: formData.contactLastName,
-          email: formData.contactEmail,
-          phone: formData.contactPhone || undefined,
-          job_title: formData.contactJobTitle || undefined,
+          first_name: truncate(sanitizeInput(formData.contactFirstName), INPUT_LIMITS.name),
+          last_name: truncate(sanitizeInput(formData.contactLastName), INPUT_LIMITS.name),
+          email: formData.contactEmail.trim().toLowerCase(),
+          phone: formData.contactPhone ? truncate(sanitizeInput(formData.contactPhone), INPUT_LIMITS.phone) : undefined,
+          job_title: formData.contactJobTitle ? truncate(sanitizeInput(formData.contactJobTitle), INPUT_LIMITS.title) : undefined,
           is_primary: true,
           is_decision_maker: formData.isDecisionMaker,
         },
@@ -314,17 +353,24 @@ export default function ClientsPage() {
         </div>
 
         {/* Clients Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {loading ? (
-            <div className="col-span-full text-center py-12 text-jasper-slate">
-              Loading clients...
-            </div>
-          ) : filteredCompanies.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-jasper-slate">
-              No clients found
-            </div>
+        {loading ? (
+          <SkeletonGrid count={6} />
+        ) : filteredCompanies.length === 0 ? (
+          searchQuery ? (
+            <EmptyState
+              type="search"
+              title="No clients match your search"
+              description={`No clients found for "${searchQuery}". Try a different search term.`}
+            />
           ) : (
-            filteredCompanies.map((company) => (
+            <EmptyState
+              type="clients"
+              onAction={() => setShowCreateModal(true)}
+            />
+          )
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredCompanies.map((company) => (
               <Link
                 key={company.id}
                 href={`/clients/${company.id}`}
@@ -385,9 +431,9 @@ export default function ClientsPage() {
                   )}
                 </div>
               </Link>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Pagination */}
         {total > 20 && (
@@ -544,6 +590,7 @@ export default function ClientsPage() {
                           onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                           className="input w-full"
                           placeholder="e.g., Acme Corporation"
+                          maxLength={INPUT_LIMITS.name}
                         />
                       </div>
                       <div>
@@ -556,6 +603,7 @@ export default function ClientsPage() {
                           onChange={(e) => setFormData({ ...formData, tradingName: e.target.value })}
                           className="input w-full"
                           placeholder="Optional"
+                          maxLength={INPUT_LIMITS.name}
                         />
                       </div>
                       <div>
@@ -607,6 +655,7 @@ export default function ClientsPage() {
                           onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                           className="input w-full"
                           placeholder="https://"
+                          maxLength={INPUT_LIMITS.url}
                         />
                       </div>
                       <div>
@@ -646,6 +695,7 @@ export default function ClientsPage() {
                           value={formData.contactFirstName}
                           onChange={(e) => setFormData({ ...formData, contactFirstName: e.target.value })}
                           className="input w-full"
+                          maxLength={INPUT_LIMITS.name}
                         />
                       </div>
                       <div>
@@ -658,6 +708,7 @@ export default function ClientsPage() {
                           value={formData.contactLastName}
                           onChange={(e) => setFormData({ ...formData, contactLastName: e.target.value })}
                           className="input w-full"
+                          maxLength={INPUT_LIMITS.name}
                         />
                       </div>
                       <div>
@@ -671,6 +722,8 @@ export default function ClientsPage() {
                           onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
                           className="input w-full"
                           placeholder="contact@company.com"
+                          maxLength={INPUT_LIMITS.email}
+                          autoComplete="email"
                         />
                       </div>
                       <div>
@@ -683,6 +736,8 @@ export default function ClientsPage() {
                           onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
                           className="input w-full"
                           placeholder="+27 ..."
+                          maxLength={INPUT_LIMITS.phone}
+                          autoComplete="tel"
                         />
                       </div>
                       <div>
@@ -695,6 +750,7 @@ export default function ClientsPage() {
                           onChange={(e) => setFormData({ ...formData, contactJobTitle: e.target.value })}
                           className="input w-full"
                           placeholder="e.g., CEO, CFO, Project Manager"
+                          maxLength={INPUT_LIMITS.title}
                         />
                       </div>
                       <div className="flex items-center">
@@ -722,7 +778,11 @@ export default function ClientsPage() {
                       className="input w-full"
                       rows={3}
                       placeholder="Any additional notes about this client..."
+                      maxLength={INPUT_LIMITS.notes}
                     />
+                    <p className="text-xs text-jasper-slate-light mt-1">
+                      {formData.notes.length}/{INPUT_LIMITS.notes} characters
+                    </p>
                   </div>
 
                   {/* Form Actions */}

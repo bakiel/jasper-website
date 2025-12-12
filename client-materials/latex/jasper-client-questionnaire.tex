@@ -1,0 +1,279 @@
+\documentclass[11pt,a4paper]{article}
+
+% Page geometry
+\usepackage[margin=1in]{geometry}
+
+% Fonts - Poppins/Montserrat style via fontspec
+\usepackage{fontspec}
+\setmainfont{Helvetica Neue}[
+    BoldFont = Helvetica Neue Bold,
+    ItalicFont = Helvetica Neue Italic
+]
+\setsansfont{Helvetica Neue}
+
+% Colors - JASPER brand
+\usepackage{xcolor}
+\definecolor{jaspernavy}{HTML}{0F172A}
+\definecolor{jasperemeralddark}{HTML}{1E6B45}
+\definecolor{jasperemerald}{HTML}{2C8A5B}
+\definecolor{jasperslate}{HTML}{64748B}
+\definecolor{jaspergray}{HTML}{F8FAFC}
+
+% Graphics and images
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{background}
+
+% Tables and formatting
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{multirow}
+
+% Math for checkbox
+\usepackage{amssymb}
+
+% Form fields
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=jasperemerald,
+    urlcolor=jasperemerald
+}
+
+% Lists
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=*, itemsep=2pt}
+
+% Custom commands
+\newcommand{\formfield}[2]{%
+    \noindent\textcolor{jasperslate}{\small #1}\\[2pt]
+    \fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{%
+        \vspace{#2}%
+    }}\\[12pt]
+}
+
+\newcommand{\checkfield}[1]{%
+    $\square$ \textcolor{jaspernavy}{#1}%
+}
+
+\newcommand{\sectionheader}[1]{%
+    \vspace{16pt}
+    \noindent\colorbox{jasperemerald}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \centering\textcolor{white}{\bfseries\large #1}%
+        }%
+    }\\[12pt]
+}
+
+% Header/Footer
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\textcolor{jasperslate}{\small JASPER Financial Architecture | jasperfinance.org | models@jasperfinance.org}}
+\fancyfoot[R]{\textcolor{jasperslate}{\small Page \thepage}}
+
+\begin{document}
+
+% Title Page Header
+\begin{center}
+    % Logo placeholder - replace with actual logo
+    \includegraphics[width=3cm]{../images/jasper-logo.png}\\[8pt]
+
+    {\fontsize{28}{34}\selectfont\textcolor{jaspernavy}{\textbf{JASPER}}}\\[4pt]
+    {\small\textcolor{jasperslate}{FINANCIAL ARCHITECTURE}}\\[24pt]
+
+    \colorbox{jasperemeralddark}{%
+        \parbox{0.8\linewidth}{%
+            \centering\textcolor{white}{\Large\bfseries Client Project Questionnaire}%
+        }%
+    }\\[8pt]
+
+    {\textcolor{jasperslate}{\itshape DFI-Grade Financial Modelling}}
+\end{center}
+
+\vspace{20pt}
+
+% Introduction
+\noindent\textcolor{jaspernavy}{Thank you for your interest in JASPER Financial Architecture. This questionnaire helps us understand your project requirements and recommend the appropriate modelling solution.}
+
+\vspace{8pt}
+\noindent\textcolor{jasperslate}{\small Please complete all sections as thoroughly as possible. Incomplete information may delay our response.}
+
+% Section 1: Contact Information
+\sectionheader{1. Contact Information}
+
+\begin{tabularx}{\linewidth}{@{}XX@{}}
+\formfield{Full Name}{12pt} & \formfield{Job Title / Role}{12pt} \\
+\formfield{Company / Organisation}{12pt} & \formfield{Email Address}{12pt} \\
+\formfield{Phone Number}{12pt} & \formfield{Country}{12pt} \\
+\end{tabularx}
+
+% Section 2: Project Overview
+\sectionheader{2. Project Overview}
+
+\formfield{Project Name}{12pt}
+
+\formfield{Project Description (Brief summary of what the project involves)}{60pt}
+
+\noindent\textcolor{jasperslate}{\small Industry Sector (select one):}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXXX@{}}
+\checkfield{Renewable Energy} & \checkfield{Data Centres} & \checkfield{Agri-Industrial} & \checkfield{Climate Finance} \\[8pt]
+\checkfield{Infrastructure} & \checkfield{Technology} & \checkfield{Manufacturing} & \checkfield{Healthcare} \\[8pt]
+\multicolumn{2}{@{}l}{\checkfield{Other: \underline{\hspace{4cm}}}} & & \\
+\end{tabularx}
+
+\vspace{12pt}
+
+\noindent\textcolor{jasperslate}{\small Project Location:}\\[4pt]
+\formfield{Country / Region}{12pt}
+
+% Section 3: Financial Requirements
+\sectionheader{3. Financial Requirements}
+
+\noindent\textcolor{jasperslate}{\small Total Project Cost Estimate:}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXXX@{}}
+\checkfield{Under R10 million} & \checkfield{R10 - R50 million} & \checkfield{R50 - R100 million} & \checkfield{R100 - R500 million} \\[8pt]
+\checkfield{R500M - R1 billion} & \checkfield{Over R1 billion} & \checkfield{Not yet determined} & \\
+\end{tabularx}
+
+\vspace{12pt}
+
+\noindent\textcolor{jasperslate}{\small Funding Amount Sought:}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXXX@{}}
+\checkfield{Under R10 million} & \checkfield{R10 - R50 million} & \checkfield{R50 - R100 million} & \checkfield{R100 - R500 million} \\[8pt]
+\checkfield{Over R500 million} & \checkfield{Not yet determined} & & \\
+\end{tabularx}
+
+\vspace{12pt}
+
+\noindent\textcolor{jasperslate}{\small Proposed Funding Structure:}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXX@{}}
+Equity: \underline{\hspace{2cm}}\% & Senior Debt: \underline{\hspace{2cm}}\% & Grants/Subsidies: \underline{\hspace{2cm}}\% \\
+\end{tabularx}
+
+\vspace{12pt}
+
+\noindent\textcolor{jasperslate}{\small Current Funding Stage:}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXX@{}}
+\checkfield{Seed / Pre-Revenue} & \checkfield{Series A} & \checkfield{Series B+} \\[8pt]
+\checkfield{Growth Stage} & \checkfield{Expansion} & \checkfield{Established Business} \\
+\end{tabularx}
+
+\newpage
+
+% Section 4: Project Timeline
+\sectionheader{4. Project Timeline}
+
+\noindent\textcolor{jasperslate}{\small Construction / Development Period:}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXXX@{}}
+\checkfield{Under 1 year} & \checkfield{1 - 2 years} & \checkfield{2 - 3 years} & \checkfield{Over 3 years} \\
+\end{tabularx}
+
+\vspace{12pt}
+
+\noindent\textcolor{jasperslate}{\small Operating Period for Projections:}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXXX@{}}
+\checkfield{10 years} & \checkfield{15 years} & \checkfield{20 years} & \checkfield{25+ years} \\
+\end{tabularx}
+
+\vspace{12pt}
+
+\formfield{Target Financial Close Date (if known)}{12pt}
+
+% Section 5: Target Funders
+\sectionheader{5. Target Funders}
+
+\noindent\textcolor{jasperslate}{\small Which funders are you targeting? (select all that apply):}\\[8pt]
+
+\noindent\textbf{\textcolor{jaspernavy}{African DFIs:}}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXX@{}}
+\checkfield{IDC (South Africa)} & \checkfield{DBSA} & \checkfield{AfDB} \\[6pt]
+\checkfield{Afreximbank} & \checkfield{TDB} & \checkfield{Other African DFI} \\
+\end{tabularx}
+
+\vspace{8pt}
+
+\noindent\textbf{\textcolor{jaspernavy}{International DFIs:}}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXX@{}}
+\checkfield{IFC (World Bank)} & \checkfield{US DFC} & \checkfield{British International Investment} \\[6pt]
+\checkfield{DEG (Germany)} & \checkfield{FMO (Netherlands)} & \checkfield{Proparco (France)} \\
+\end{tabularx}
+
+\vspace{8pt}
+
+\noindent\textbf{\textcolor{jaspernavy}{Other Funders:}}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXX@{}}
+\checkfield{Commercial Banks} & \checkfield{Private Equity} & \checkfield{Sovereign Wealth Fund} \\[6pt]
+\checkfield{Impact Investors} & \checkfield{Family Office} & \checkfield{Other: \underline{\hspace{2cm}}} \\
+\end{tabularx}
+
+% Section 6: Existing Materials
+\sectionheader{6. Existing Materials}
+
+\noindent\textcolor{jasperslate}{\small What materials do you already have? (select all that apply):}\\[8pt]
+\begin{tabularx}{\linewidth}{@{}XX@{}}
+\checkfield{Business Plan} & \checkfield{Feasibility Study} \\[6pt]
+\checkfield{Existing Financial Model} & \checkfield{Engineering Studies / EPC Quotes} \\[6pt]
+\checkfield{Environmental Impact Assessment} & \checkfield{Legal / Regulatory Approvals} \\[6pt]
+\checkfield{Letters of Intent from Customers} & \checkfield{Term Sheets from Funders} \\
+\end{tabularx}
+
+% Section 7: Model Requirements
+\sectionheader{7. Model Requirements}
+
+\noindent\textcolor{jasperslate}{\small Which JASPER package are you interested in?}\\[8pt]
+\begin{tabularx}{\linewidth}{@{}X@{}}
+\checkfield{\textbf{Foundation (R45,000)} - 10-year model, basic sensitivity, 2 revisions} \\[6pt]
+\checkfield{\textbf{Professional (R150,000)} - 15-year model, Monte Carlo, DFI documentation, 5 revisions} \\[6pt]
+\checkfield{\textbf{Enterprise (R450,000)} - 20+ year model, advanced analytics, unlimited revisions} \\[6pt]
+\checkfield{\textbf{Custom} - Complex multi-project or bespoke requirements} \\[6pt]
+\checkfield{Not sure - please advise based on my requirements} \\
+\end{tabularx}
+
+\vspace{12pt}
+
+\formfield{Any specific model features or requirements?}{40pt}
+
+% Section 8: Timeline & Budget
+\sectionheader{8. Timeline \& Budget}
+
+\noindent\textcolor{jasperslate}{\small When do you need the model?}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}XXXX@{}}
+\checkfield{Urgent (1-2 weeks)} & \checkfield{Standard (3-4 weeks)} & \checkfield{Flexible (1-2 months)} & \checkfield{Planning stage} \\
+\end{tabularx}
+
+\vspace{12pt}
+
+\formfield{Budget Range (if different from package pricing)}{12pt}
+
+% Section 9: Additional Information
+\sectionheader{9. Additional Information}
+
+\formfield{How did you hear about JASPER?}{12pt}
+
+\formfield{Any other information you'd like to share about your project?}{60pt}
+
+% Footer
+\vspace{24pt}
+\begin{center}
+\colorbox{jaspergray}{%
+    \parbox{0.9\linewidth}{%
+        \centering
+        \textcolor{jaspernavy}{\bfseries Submit this questionnaire to:}\\[4pt]
+        \textcolor{jasperemerald}{models@jasperfinance.org}\\[8pt]
+        \textcolor{jasperslate}{\small Or complete online at: jasperfinance.org/intake}
+    }%
+}
+\end{center}
+
+\vspace{16pt}
+
+\begin{center}
+\textcolor{jasperslate}{\small\itshape JASPER Financial Architecture is a division of Kutlwano Holdings (Pty) Ltd.\\
+All information provided is treated as confidential.}
+\end{center}
+
+\end{document}

@@ -10,34 +10,34 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // JASPER Brand Colors
+        // JASPER Brand Colors - using CSS variables for dark mode support
         jasper: {
-          navy: '#0F2A3C',
-          emerald: '#2C8A5B',
-          'emerald-dark': '#1E6B45',
-          'emerald-light': '#4DB87D',
-          carbon: '#0F172A',
-          graphite: '#1E293B',
-          slate: '#334155',
-          'slate-light': '#475569',
+          navy: 'var(--jasper-navy)',
+          emerald: 'var(--jasper-emerald)',
+          'emerald-dark': 'var(--jasper-emerald-dark)',
+          'emerald-light': 'var(--jasper-emerald-light)',
+          carbon: 'var(--jasper-carbon)',
+          graphite: 'var(--jasper-graphite)',
+          slate: 'var(--jasper-slate)',
+          'slate-light': 'var(--jasper-slate-light)',
         },
-        // Semantic colors
+        // Semantic colors using CSS variables
         surface: {
-          primary: '#FFFFFF',
-          secondary: '#F8FAFC',
-          tertiary: '#F1F5F9',
+          primary: 'var(--surface-primary)',
+          secondary: 'var(--surface-secondary)',
+          tertiary: 'var(--surface-tertiary)',
         },
         border: {
-          DEFAULT: '#E2E8F0',
-          light: '#F1F5F9',
-          dark: '#CBD5E1',
+          DEFAULT: 'var(--border-default)',
+          light: 'var(--border-light)',
+          dark: 'var(--border-dark)',
         },
-        // Status colors
+        // Status colors using CSS variables
         status: {
-          success: '#16A34A',
-          warning: '#CA8A04',
-          error: '#DC2626',
-          info: '#2563EB',
+          success: 'var(--status-success)',
+          warning: 'var(--status-warning)',
+          error: 'var(--status-error)',
+          info: 'var(--status-info)',
         },
       },
       fontFamily: {

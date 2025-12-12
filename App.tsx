@@ -1,15 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import Page from './app/page';
-import SectorsPage from './app/sectors/page';
-import ProcessPage from './app/process/page';
-import ContactPage from './app/contact/page';
-import FAQPage from './app/faq/page';
-import TermsPage from './app/terms/page';
-import NotFoundPage from './app/404/page';
-import LoginPage from './app/login/page';
-import PortalPage from './app/portal/page';
-import { SectorPage } from './components/SectorPage';
+
+// Lazy load pages for code splitting - reduces initial bundle size
+const Page = lazy(() => import('./app/page'));
+const SectorsPage = lazy(() => import('./app/sectors/page'));
+const ProcessPage = lazy(() => import('./app/process/page'));
+const ContactPage = lazy(() => import('./app/contact/page'));
+const FAQPage = lazy(() => import('./app/faq/page'));
+const TermsPage = lazy(() => import('./app/terms/page'));
+const NotFoundPage = lazy(() => import('./app/404/page'));
+const LoginPage = lazy(() => import('./app/login/page'));
+const PortalPage = lazy(() => import('./app/portal/page'));
+const SectorPage = lazy(() => import('./components/SectorPage').then(module => ({ default: module.SectorPage })));
+
+// Loading spinner component
+const LoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center bg-[#0a192f]">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 border-4 border-[#10b981]/20 border-t-[#10b981] rounded-full animate-spin" />
+      <p className="text-white/60 text-sm">Loading...</p>
+    </div>
+  </div>
+);
 
 // Simple Route Types
 type Route =
@@ -29,10 +41,10 @@ const App: React.FC = () => {
 
   const getRouteFromPath = (pathname: string): Route => {
     // Robust cleaning: remove trailing slash, ensure lowercase for matching
-    const cleanPath = pathname.endsWith('/') && pathname.length > 1 
-      ? pathname.slice(0, -1).toLowerCase() 
+    const cleanPath = pathname.endsWith('/') && pathname.length > 1
+      ? pathname.slice(0, -1).toLowerCase()
       : pathname.toLowerCase();
-    
+
     if (cleanPath === '' || cleanPath === '/') {
       return { path: 'home' };
     } else if (cleanPath === '/sectors') {
@@ -59,7 +71,7 @@ const App: React.FC = () => {
           }
       }
     }
-    
+
     // Show 404 for unknown routes
     return { path: '404' };
   };
@@ -72,9 +84,9 @@ const App: React.FC = () => {
     };
 
     window.addEventListener('popstate', handlePopState);
-    
+
     // Initial Route Check
-    handlePopState(); 
+    handlePopState();
 
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
@@ -90,79 +102,81 @@ const App: React.FC = () => {
   };
 
   return (
-    <AnimatePresence mode="wait">
-      {route.path === 'home' && (
-        <Page 
-          key="home" 
-          onNavigate={navigate} 
-        />
-      )}
-      
-      {route.path === 'sectors-list' && (
-        <SectorsPage 
-          key="sectors-list" 
-          onNavigate={navigate} 
-        />
-      )}
-      
-      {route.path === 'process' && (
-        <ProcessPage
-            key="process"
+    <Suspense fallback={<LoadingSpinner />}>
+      <AnimatePresence mode="wait">
+        {route.path === 'home' && (
+          <Page
+            key="home"
             onNavigate={navigate}
-        />
-      )}
+          />
+        )}
 
-      {route.path === 'contact' && (
-        <ContactPage
-            key="contact"
+        {route.path === 'sectors-list' && (
+          <SectorsPage
+            key="sectors-list"
             onNavigate={navigate}
-        />
-      )}
+          />
+        )}
 
-      {route.path === 'faq' && (
-        <FAQPage
-            key="faq"
+        {route.path === 'process' && (
+          <ProcessPage
+              key="process"
+              onNavigate={navigate}
+          />
+        )}
+
+        {route.path === 'contact' && (
+          <ContactPage
+              key="contact"
+              onNavigate={navigate}
+          />
+        )}
+
+        {route.path === 'faq' && (
+          <FAQPage
+              key="faq"
+              onNavigate={navigate}
+          />
+        )}
+
+        {route.path === 'terms' && (
+          <TermsPage
+              key="terms"
+              onNavigate={navigate}
+          />
+        )}
+
+        {route.path === 'login' && (
+          <LoginPage
+              key="login"
+          />
+        )}
+
+        {route.path === 'portal' && (
+          <PortalPage
+              key="portal"
+          />
+        )}
+
+        {route.path === 'sector-detail' && (
+          <SectorPage
+            // Use slug as key to force remount/animation when switching between sectors
+            key={`sector-${route.slug}`}
+            slug={route.slug}
+            onBack={() => navigate('/sectors')}
             onNavigate={navigate}
-        />
-      )}
+          />
+        )}
 
-      {route.path === 'terms' && (
-        <TermsPage
-            key="terms"
-            onNavigate={navigate}
-        />
-      )}
-
-      {route.path === 'login' && (
-        <LoginPage
-            key="login"
-        />
-      )}
-
-      {route.path === 'portal' && (
-        <PortalPage
-            key="portal"
-        />
-      )}
-
-      {route.path === 'sector-detail' && (
-        <SectorPage
-          // Use slug as key to force remount/animation when switching between sectors
-          key={`sector-${route.slug}`}
-          slug={route.slug}
-          onBack={() => navigate('/sectors')}
-          onNavigate={navigate}
-        />
-      )}
-
-      {/* 404 Page */}
-      {route.path === '404' && (
-        <NotFoundPage
-            key="404"
-            onNavigate={navigate}
-        />
-      )}
-    </AnimatePresence>
+        {/* 404 Page */}
+        {route.path === '404' && (
+          <NotFoundPage
+              key="404"
+              onNavigate={navigate}
+          />
+        )}
+      </AnimatePresence>
+    </Suspense>
   );
 };
 

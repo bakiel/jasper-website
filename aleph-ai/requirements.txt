@@ -1,0 +1,38 @@
+# ALEPH AI Infrastructure
+# Self-Hosted AI Platform for Kutlwano Holdings
+# VPS: root@72.61.201.237
+
+# Web Framework
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+python-multipart==0.0.9
+
+# ML/AI Core
+torch>=2.0.0
+transformers>=4.40.0
+sentence-transformers>=3.0.0
+
+# Vector Database
+pymilvus>=2.4.0
+milvus-lite>=2.4.0
+
+# Fix marshmallow compatibility
+marshmallow>=3.13.0,<4.0.0
+
+# Database
+asyncpg==0.29.0
+sqlalchemy[asyncio]==2.0.25
+
+# HTTP Client (for OpenRouter)
+httpx==0.26.0
+aiohttp==3.9.3
+
+# Utilities
+pydantic==2.6.1
+pydantic-settings==2.1.0
+python-dotenv==1.0.1
+numpy>=1.24.0
+pillow>=10.0.0
+
+# Production
+gunicorn==21.2.0

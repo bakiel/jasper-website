@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -22,10 +22,61 @@ import {
   Menu,
   X,
   Home,
+  Loader2,
 } from 'lucide-react';
 
+// Types
+interface UserData {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+}
+
+// API URL
+const API_URL = import.meta.env?.PROD
+  ? 'https://api.jasperfinance.org'
+  : 'http://localhost:3001';
+
+// Auth hook
+function useAuth() {
+  const [user, setUser] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const res = await fetch(`${API_URL}/auth/me`, {
+          credentials: 'include',
+        });
+        const data = await res.json();
+
+        if (data.authenticated && data.user) {
+          setUser(data.user);
+        } else {
+          // Not authenticated, redirect to login
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = '/login';
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    checkAuth();
+  }, []);
+
+  const logout = () => {
+    window.location.href = `${API_URL}/auth/logout`;
+  };
+
+  return { user, loading, logout };
+}
+
 // Navigation Component
-function Navbar() {
+function Navbar({ user }: { user: UserData | null }) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-brand-navy/80 backdrop-blur-xl border-b border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,6 +87,10 @@ function Navbar() {
                 src="/images/jasper-icon.png"
                 alt="JASPER"
                 className="w-full h-full object-contain"
+                onError={(e) => {
+                  // Fallback if image doesn't load
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
             </div>
             <div className="flex flex-col">
@@ -48,9 +103,17 @@ function Navbar() {
               <Bell className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-brand-emerald rounded-full" />
             </button>
-            <div className="w-8 h-8 rounded-full bg-brand-surface flex items-center justify-center">
-              <User className="w-4 h-4 text-brand-muted" />
-            </div>
+            {user?.picture ? (
+              <img
+                src={user.picture}
+                alt={user.name}
+                className="w-8 h-8 rounded-full object-cover border border-white/10"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-brand-surface flex items-center justify-center">
+                <User className="w-4 h-4 text-brand-muted" />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -59,11 +122,12 @@ function Navbar() {
 }
 
 // Sidebar Component
-function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }: {
+function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }: {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  onLogout: () => void;
 }) {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -124,7 +188,10 @@ function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }: {
             <Home className="w-5 h-5" />
             <span className="font-medium">Back to Site</span>
           </a>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:text-red-300 transition-colors">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:text-red-300 transition-colors"
+          >
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Sign Out</span>
           </button>
@@ -272,7 +339,7 @@ function ActivityItem({ activity }: { activity: any }) {
 }
 
 // Dashboard Content
-function DashboardContent() {
+function DashboardContent({ userName }: { userName?: string }) {
   const stats = [
     { title: 'Active Projects', value: '3', change: '+1 this month', icon: Briefcase, color: 'bg-brand-emerald' },
     { title: 'Documents', value: '12', icon: FileText, color: 'bg-blue-500' },
@@ -287,10 +354,13 @@ function DashboardContent() {
     { message: 'Project milestone achieved: Phase 1 complete', time: '2 days ago', color: 'bg-brand-emerald' },
   ];
 
+  // Get first name only
+  const firstName = userName?.split(' ')[0] || 'there';
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Welcome back, Client</h1>
+        <h1 className="text-2xl font-bold text-white">Welcome back, {firstName}</h1>
         <p className="text-brand-muted mt-1">Here's what's happening with your projects</p>
       </div>
 
@@ -444,7 +514,7 @@ function AnalyticsContent() {
 }
 
 // Settings Content
-function SettingsContent() {
+function SettingsContent({ user }: { user: UserData | null }) {
   return (
     <div className="space-y-6">
       <div>
@@ -455,11 +525,28 @@ function SettingsContent() {
       <div className="bg-brand-dark/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
         <h2 className="text-lg font-semibold text-white mb-4">Profile Information</h2>
         <div className="space-y-4">
+          <div className="flex items-center gap-4 mb-6">
+            {user?.picture ? (
+              <img
+                src={user.picture}
+                alt={user.name}
+                className="w-16 h-16 rounded-full object-cover border-2 border-brand-emerald/30"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-brand-surface flex items-center justify-center">
+                <User className="w-8 h-8 text-brand-muted" />
+              </div>
+            )}
+            <div>
+              <p className="text-white font-medium">{user?.name || 'User'}</p>
+              <p className="text-brand-muted text-sm">{user?.email || 'No email'}</p>
+            </div>
+          </div>
           <div>
             <label className="block text-brand-muted text-sm mb-2">Full Name</label>
             <input
               type="text"
-              defaultValue="Demo Client"
+              defaultValue={user?.name || ''}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-brand-emerald focus:outline-none"
             />
           </div>
@@ -467,15 +554,17 @@ function SettingsContent() {
             <label className="block text-brand-muted text-sm mb-2">Email</label>
             <input
               type="email"
-              defaultValue="client@example.com"
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-brand-emerald focus:outline-none"
+              defaultValue={user?.email || ''}
+              disabled
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white/50 cursor-not-allowed"
             />
+            <p className="text-brand-muted text-xs mt-1">Email is managed by Google</p>
           </div>
           <div>
             <label className="block text-brand-muted text-sm mb-2">Company</label>
             <input
               type="text"
-              defaultValue="Demo Company Ltd"
+              placeholder="Your company name"
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-brand-emerald focus:outline-none"
             />
           </div>
@@ -490,13 +579,26 @@ function SettingsContent() {
 
 // Main Portal Page
 export default function PortalPage() {
+  const { user, loading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-brand-navy flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-brand-emerald animate-spin mx-auto mb-4" />
+          <p className="text-brand-muted">Loading your portal...</p>
+        </div>
+      </div>
+    );
+  }
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardContent />;
+        return <DashboardContent userName={user?.name} />;
       case 'projects':
         return <ProjectsContent />;
       case 'documents':
@@ -504,20 +606,21 @@ export default function PortalPage() {
       case 'analytics':
         return <AnalyticsContent />;
       case 'settings':
-        return <SettingsContent />;
+        return <SettingsContent user={user} />;
       default:
-        return <DashboardContent />;
+        return <DashboardContent userName={user?.name} />;
     }
   };
 
   return (
     <div className="min-h-screen bg-brand-navy">
-      <Navbar />
+      <Navbar user={user} />
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
+        onLogout={logout}
       />
 
       {/* Mobile menu button */}

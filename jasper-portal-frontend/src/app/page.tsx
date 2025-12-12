@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, formatDate, formatStage, getStageColor, cn } from '@/lib/utils'
 import { dashboardApi, projectsApi, invoicesApi } from '@/lib/api'
+import { ActivityLog } from '@/components/activity'
 import Link from 'next/link'
 
 interface DashboardData {
@@ -164,10 +165,10 @@ export default function DashboardPage() {
 
           {/* Quick Stats */}
           <div className="space-y-6">
-            {/* Recent Inquiries */}
+            {/* Recent Activity Summary */}
             <div className="card">
               <div className="card-header">
-                <h3 className="font-semibold text-jasper-carbon">Recent Inquiries</h3>
+                <h3 className="font-semibold text-jasper-carbon">Recent Activity</h3>
               </div>
               <div className="divide-y divide-border">
                 {dashboard?.recent_inquiries?.slice(0, 4).map((inquiry) => (
@@ -180,21 +181,8 @@ export default function DashboardPage() {
                   </div>
                 ))}
                 {(!dashboard?.recent_inquiries || dashboard.recent_inquiries.length === 0) && (
-                  <p className="text-sm text-jasper-slate text-center py-4">No recent inquiries</p>
+                  <p className="text-sm text-jasper-slate text-center py-4">No recent activity</p>
                 )}
-              </div>
-            </div>
-
-            {/* Outstanding Balance */}
-            <div className="card bg-gradient-to-br from-jasper-navy to-jasper-graphite text-white">
-              <div className="card-body">
-                <p className="text-sm text-gray-300 mb-1">Pending Payments</p>
-                <p className="text-2xl font-bold">{formatCurrency(pendingPayments * 100, 'USD')}</p>
-                <div className="mt-4 pt-4 border-t border-white/20">
-                  <Link href="/invoices" className="text-sm text-jasper-emerald-light hover:text-white flex items-center gap-1">
-                    View pending invoices <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
               </div>
             </div>
           </div>
@@ -301,6 +289,9 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Activity Log */}
+        <ActivityLog limit={5} showHeader={true} />
       </div>
     </div>
   )

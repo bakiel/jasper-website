@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JASPER iMail</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              jasper: {
+                navy: '#0B1E2B',
+                carbon: '#0F172A',
+                dark: '#050A14',
+                emerald: '#2C8A5B',
+                glow: '#44D685',
+                muted: 'rgba(255, 255, 255, 0.6)',
+                text: 'rgba(255, 255, 255, 0.95)',
+              }
+            },
+            fontFamily: {
+              sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+              mono: ['Geist Mono', 'monospace'],
+            },
+            animation: {
+              'radar-scan': 'radar-scan 8s linear infinite',
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'flow': 'flow 20s linear infinite',
+            },
+            keyframes: {
+              'radar-scan': {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(360deg)' },
+              },
+              flow: {
+                'to': { strokeDashoffset: '-1000' }
+              }
+            }
+          },
+        },
+      };
+    </script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+      
+      body {
+        background-color: #0B1E2B;
+        color: rgba(255, 255, 255, 0.95);
+      }
+
+      /* Glass Utilities */
+      .glass-panel {
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      
+      .glass-card {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .glass-card:hover {
+        border-color: rgba(44, 138, 91, 0.3);
+        box-shadow: 0 0 20px rgba(44, 214, 133, 0.1);
+      }
+
+      /* Radar Sweep Gradient */
+      .radar-sweep {
+        background: conic-gradient(
+          from 180deg at 50% 50%,
+          transparent 0deg,
+          transparent 200deg,
+          rgba(44, 214, 133, 0.05) 240deg,
+          rgba(44, 214, 133, 0.4) 360deg
+        );
+      }
+      
+      .mask-radar {
+        mask-image: radial-gradient(circle at center, black 0%, black 40%, transparent 70%);
+        -webkit-mask-image: radial-gradient(circle at center, black 0%, black 40%, transparent 70%);
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0B1E2B;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #2C8A5B;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.559.0",
+    "recharts": "https://esm.sh/recharts@^3.5.1",
+    "react/": "https://esm.sh/react@^19.2.1/",
+    "react": "https://esm.sh/react@^19.2.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

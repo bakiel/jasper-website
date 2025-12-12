@@ -92,10 +92,11 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = () => {
     setIsLoading(true);
-    // In production, this would initiate OAuth flow
-    setTimeout(() => {
-      window.location.href = '/portal';
-    }, 1000);
+    // Redirect to Google OAuth endpoint
+    const apiUrl = import.meta.env.PROD
+      ? 'https://api.jasperfinance.org'
+      : 'http://localhost:3001';
+    window.location.href = `${apiUrl}/auth/google`;
   };
 
   return (

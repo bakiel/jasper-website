@@ -22,9 +22,60 @@ import {
   Loader2,
   FolderOpen,
   MessageSquare,
+  X,
+  AlertCircle,
+  CheckCircle,
+  FolderKanban,
 } from 'lucide-react'
 import { formatCurrency, formatDate, formatStage, formatPackage, getStageColor, cn } from '@/lib/utils'
 import { projectsApi, documentsApi, DocumentData } from '@/lib/api'
+import { useQueryClient } from '@tanstack/react-query'
+
+// Package options for JASPER
+const packageOptions = [
+  { value: 'startup', label: 'Start-Up Package', price: 'R45,000 - R75,000' },
+  { value: 'growth', label: 'Growth Package', price: 'R150,000 - R350,000' },
+  { value: 'enterprise', label: 'Enterprise Package', price: 'R500,000 - R750,000' },
+  { value: 'custom', label: 'Custom Package', price: 'Custom pricing' },
+]
+
+// Sector options
+const sectorOptions = [
+  'Agriculture',
+  'Energy & Power',
+  'Infrastructure',
+  'Manufacturing',
+  'Mining',
+  'Real Estate',
+  'Technology',
+  'Transportation',
+  'Water & Sanitation',
+  'Healthcare',
+  'Education',
+  'Financial Services',
+  'Other',
+]
+
+// Currency options
+const currencyOptions = [
+  { value: 'ZAR', label: 'ZAR - South African Rand' },
+  { value: 'USD', label: 'USD - US Dollar' },
+  { value: 'EUR', label: 'EUR - Euro' },
+  { value: 'GBP', label: 'GBP - British Pound' },
+]
+
+interface EditProjectForm {
+  name: string
+  description: string
+  package: string
+  value: number | ''
+  currency: string
+  target_completion: string
+  project_sector: string
+  project_location: string
+  funding_amount: number | ''
+  target_dfis: string
+}
 
 // Pipeline stages in order
 const PIPELINE_STAGES = [
@@ -89,6 +140,26 @@ export default function ProjectDetailPage() {
   const [updatingMilestone, setUpdatingMilestone] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'messages'>('overview')
 
+  // Edit Project Modal state
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [updateError, setUpdateError] = useState('')
+  const [updateSuccess, setUpdateSuccess] = useState(false)
+  const [editForm, setEditForm] = useState<EditProjectForm>({
+    name: '',
+    description: '',
+    package: '',
+    value: '',
+    currency: 'ZAR',
+    target_completion: '',
+    project_sector: '',
+    project_location: '',
+    funding_amount: '',
+    target_dfis: '',
+  })
+
+  const queryClient = useQueryClient()
+
   const fetchData = async () => {
     try {
       const [projectData, milestonesData, documentsData] = await Promise.all([
@@ -148,6 +219,85 @@ export default function ProjectDetailPage() {
       console.error('Failed to update milestone:', error)
     } finally {
       setUpdatingMilestone(null)
+    }
+  }
+
+  // Edit Project handlers
+  const openEditModal = () => {
+    if (project) {
+      setEditForm({
+        name: project.name || '',
+        description: project.description || '',
+        package: project.package || '',
+        value: project.value || '',
+        currency: project.currency || 'ZAR',
+        target_completion: project.target_completion ? project.target_completion.split('T')[0] : '',
+        project_sector: project.project_sector || '',
+        project_location: project.project_location || '',
+        funding_amount: project.funding_amount || '',
+        target_dfis: project.target_dfis?.join(', ') || '',
+      })
+      setUpdateError('')
+      setUpdateSuccess(false)
+      setShowEditModal(true)
+    }
+  }
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setEditForm(prev => ({
+      ...prev,
+      [name]: name === 'value' || name === 'funding_amount'
+        ? (value === '' ? '' : Number(value))
+        : value
+    }))
+  }
+
+  const handleUpdateProject = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsUpdating(true)
+    setUpdateError('')
+    setUpdateSuccess(false)
+
+    try {
+      const updateData: any = {
+        name: editForm.name,
+        description: editForm.description || null,
+        package: editForm.package,
+        value: editForm.value || null,
+        currency: editForm.currency,
+        target_completion: editForm.target_completion || null,
+        project_sector: editForm.project_sector || null,
+        project_location: editForm.project_location || null,
+        funding_amount: editForm.funding_amount || null,
+        target_dfis: editForm.target_dfis
+          ? editForm.target_dfis.split(',').map(s => s.trim()).filter(s => s)
+          : null,
+      }
+
+      const updated = await projectsApi.update(projectId, updateData)
+      setProject(updated)
+      setUpdateSuccess(true)
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+
+      // Close modal after brief success display
+      setTimeout(() => {
+        setShowEditModal(false)
+        setUpdateSuccess(false)
+      }, 1500)
+    } catch (error: any) {
+      console.error('Failed to update project:', error)
+      setUpdateError(error.response?.data?.detail || 'Failed to update project')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleCloseEditModal = () => {
+    if (!isUpdating) {
+      setShowEditModal(false)
+      setUpdateError('')
+      setUpdateSuccess(false)
     }
   }
 
@@ -302,7 +452,11 @@ export default function ProjectDetailPage() {
                     <span className={cn('badge text-sm', getStageColor(project.stage))}>
                       {formatStage(project.stage)}
                     </span>
-                    <button className="p-2 hover:bg-surface-secondary rounded-lg transition-colors">
+                    <button
+                      onClick={openEditModal}
+                      className="p-2 hover:bg-surface-secondary rounded-lg transition-colors"
+                      title="Edit Project"
+                    >
                       <Edit className="w-4 h-4 text-jasper-slate" />
                     </button>
                   </div>
@@ -507,7 +661,10 @@ export default function ProjectDetailPage() {
                     <FolderOpen className="w-4 h-4" />
                     Manage Documents
                   </button>
-                  <button className="btn-ghost w-full justify-start">
+                  <button
+                    onClick={openEditModal}
+                    className="btn-ghost w-full justify-start"
+                  >
                     <Edit className="w-4 h-4" />
                     Edit Project
                   </button>
@@ -594,6 +751,243 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Project Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-primary rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-jasper-emerald/10 flex items-center justify-center">
+                  <FolderKanban className="w-5 h-5 text-jasper-emerald" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-jasper-carbon">Edit Project</h2>
+                  <p className="text-sm text-jasper-slate">{project.reference}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseEditModal}
+                className="p-2 hover:bg-surface-secondary rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-jasper-slate" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleUpdateProject} className="p-6">
+              {/* Success Message */}
+              {updateSuccess && (
+                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span className="text-green-700">Project updated successfully!</span>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {updateError && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <span className="text-red-700">{updateError}</span>
+                </div>
+              )}
+
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div>
+                  <h3 className="text-sm font-medium text-jasper-carbon mb-4">Basic Information</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label htmlFor="name" className="input-label">Project Name *</label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={editForm.name}
+                        onChange={handleEditInputChange}
+                        className="input"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="description" className="input-label">Description</label>
+                      <textarea
+                        id="description"
+                        name="description"
+                        value={editForm.description}
+                        onChange={handleEditInputChange}
+                        rows={3}
+                        className="input resize-none"
+                        placeholder="Brief description of the project..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Package & Value */}
+                <div>
+                  <h3 className="text-sm font-medium text-jasper-carbon mb-4">Package & Value</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="package" className="input-label">Package *</label>
+                      <select
+                        id="package"
+                        name="package"
+                        value={editForm.package}
+                        onChange={handleEditInputChange}
+                        className="input"
+                        required
+                      >
+                        <option value="">Select package...</option>
+                        {packageOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label} ({opt.price})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="currency" className="input-label">Currency</label>
+                      <select
+                        id="currency"
+                        name="currency"
+                        value={editForm.currency}
+                        onChange={handleEditInputChange}
+                        className="input"
+                      >
+                        {currencyOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="value" className="input-label">Project Value</label>
+                      <input
+                        type="number"
+                        id="value"
+                        name="value"
+                        value={editForm.value}
+                        onChange={handleEditInputChange}
+                        className="input"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="target_completion" className="input-label">Target Completion</label>
+                      <input
+                        type="date"
+                        id="target_completion"
+                        name="target_completion"
+                        value={editForm.target_completion}
+                        onChange={handleEditInputChange}
+                        className="input"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Project Details */}
+                <div>
+                  <h3 className="text-sm font-medium text-jasper-carbon mb-4">Project Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="project_sector" className="input-label">Sector</label>
+                      <select
+                        id="project_sector"
+                        name="project_sector"
+                        value={editForm.project_sector}
+                        onChange={handleEditInputChange}
+                        className="input"
+                      >
+                        <option value="">Select sector...</option>
+                        {sectorOptions.map(sector => (
+                          <option key={sector} value={sector}>{sector}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="project_location" className="input-label">Location</label>
+                      <input
+                        type="text"
+                        id="project_location"
+                        name="project_location"
+                        value={editForm.project_location}
+                        onChange={handleEditInputChange}
+                        className="input"
+                        placeholder="City, Country"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="funding_amount" className="input-label">Funding Target</label>
+                      <input
+                        type="number"
+                        id="funding_amount"
+                        name="funding_amount"
+                        value={editForm.funding_amount}
+                        onChange={handleEditInputChange}
+                        className="input"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="target_dfis" className="input-label">Target DFIs</label>
+                      <input
+                        type="text"
+                        id="target_dfis"
+                        name="target_dfis"
+                        value={editForm.target_dfis}
+                        onChange={handleEditInputChange}
+                        className="input"
+                        placeholder="AfDB, IFC, DBSA (comma-separated)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-border">
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  className="btn-secondary"
+                  disabled={isUpdating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isUpdating || !editForm.name || !editForm.package}
+                >
+                  {isUpdating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Project'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
