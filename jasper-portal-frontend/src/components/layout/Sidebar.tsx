@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   Users,
+  UserCheck,
   FileText,
   MessageSquare,
   Settings,
@@ -26,6 +27,7 @@ const navItems = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Clients', href: '/clients', icon: Users },
+  { name: 'Portal Users', href: '/portal-users', icon: UserCheck },
   { name: 'Messages', href: '/messages', icon: MessageSquare },
   { name: 'Invoices', href: '/invoices', icon: FileText },
 ]
