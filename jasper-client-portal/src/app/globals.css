@@ -1,0 +1,215 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark Mode by Default - Premium Client Experience */
+    --jasper-navy: #1E3A4C;
+    --jasper-emerald: #3DA872;
+    --jasper-emerald-dark: #2C8A5B;
+    --jasper-emerald-light: #5FC992;
+    --jasper-carbon: #E2E8F0;
+    --jasper-graphite: #CBD5E1;
+    --jasper-slate: #94A3B8;
+    --jasper-slate-light: #64748B;
+
+    /* Dark Surfaces */
+    --surface-primary: #0F172A;
+    --surface-secondary: #1E293B;
+    --surface-tertiary: #334155;
+
+    /* Dark Borders */
+    --border-default: #334155;
+    --border-light: #1E293B;
+    --border-dark: #475569;
+
+    /* Status Colors */
+    --status-success: #22C55E;
+    --status-warning: #EAB308;
+    --status-error: #EF4444;
+    --status-info: #3B82F6;
+  }
+
+  html {
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface-primary text-jasper-carbon;
+  }
+
+  * {
+    @apply border-border;
+  }
+}
+
+@layer components {
+  /* Premium Button Styles */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3
+           bg-jasper-emerald text-white font-medium text-sm
+           rounded-lg transition-all duration-200
+           hover:bg-jasper-emerald-dark hover:shadow-glow
+           focus:outline-none focus:ring-2 focus:ring-jasper-emerald focus:ring-offset-2 focus:ring-offset-surface-primary
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3
+           bg-surface-secondary text-jasper-carbon font-medium text-sm
+           border border-border rounded-lg transition-all duration-200
+           hover:bg-surface-tertiary hover:border-border-dark
+           focus:outline-none focus:ring-2 focus:ring-jasper-emerald focus:ring-offset-2 focus:ring-offset-surface-primary
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3
+           bg-transparent text-jasper-slate font-medium text-sm
+           rounded-lg transition-all duration-200
+           hover:bg-surface-tertiary hover:text-jasper-carbon
+           focus:outline-none focus:ring-2 focus:ring-jasper-emerald focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Premium Card Styles */
+  .card {
+    @apply bg-surface-secondary rounded-xl border border-border shadow-card
+           transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply hover:shadow-card-hover hover:border-jasper-emerald/30;
+  }
+
+  .card-header {
+    @apply px-6 py-4 border-b border-border;
+  }
+
+  .card-body {
+    @apply p-6;
+  }
+
+  /* Form Inputs */
+  .input {
+    @apply w-full px-4 py-3 text-sm
+           bg-surface-tertiary border border-border rounded-lg
+           placeholder:text-jasper-slate-light text-jasper-carbon
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-jasper-emerald focus:border-jasper-emerald
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .input-label {
+    @apply block text-sm font-medium text-jasper-carbon mb-2;
+  }
+
+  /* Status Badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply bg-green-500/20 text-green-400 border border-green-500/30;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/30;
+  }
+
+  .badge-error {
+    @apply bg-red-500/20 text-red-400 border border-red-500/30;
+  }
+
+  .badge-info {
+    @apply bg-blue-500/20 text-blue-400 border border-blue-500/30;
+  }
+
+  /* Navigation */
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 text-sm font-medium
+           text-jasper-slate rounded-lg transition-all duration-200
+           hover:bg-surface-tertiary hover:text-jasper-carbon;
+  }
+
+  .nav-item-active {
+    background-color: rgba(61, 168, 114, 0.15);
+    color: var(--jasper-emerald);
+  }
+
+  .nav-item-active:hover {
+    background-color: rgba(61, 168, 114, 0.2);
+    color: var(--jasper-emerald);
+  }
+
+  /* Stats Card */
+  .stat-card {
+    @apply card p-5 flex items-center gap-4;
+  }
+
+  .stat-icon {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center;
+  }
+
+  .stat-label {
+    @apply text-sm font-medium text-jasper-slate;
+  }
+
+  .stat-value {
+    @apply text-2xl font-semibold text-jasper-carbon;
+  }
+
+  /* Progress Bar */
+  .progress-bar {
+    @apply h-2 bg-surface-tertiary rounded-full overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-jasper-emerald rounded-full transition-all duration-500;
+  }
+
+  /* Project Stage Colors */
+  .stage-intake {
+    @apply bg-blue-500/20 text-blue-400;
+  }
+
+  .stage-scoping {
+    @apply bg-purple-500/20 text-purple-400;
+  }
+
+  .stage-active {
+    @apply bg-emerald-500/20 text-emerald-400;
+  }
+
+  .stage-review {
+    @apply bg-yellow-500/20 text-yellow-400;
+  }
+
+  .stage-complete {
+    @apply bg-green-500/20 text-green-400;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-jasper-emerald to-jasper-emerald-light;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out forwards;
+  }
+
+  /* Glassmorphism effect */
+  .glass {
+    @apply bg-surface-secondary/80 backdrop-blur-xl border border-white/10;
+  }
+}

@@ -1,0 +1,512 @@
+% ============================================================================
+% JASPER Financial Architecture - Service Overview Brochure
+% ============================================================================
+% Compile with: xelatex jasper-service-overview.tex
+% ============================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% Include shared preamble
+\input{common/jasper-preamble}
+
+% Document metadata
+\hypersetup{
+    pdftitle={JASPER Service Overview},
+    pdfsubject={DFI-Grade Financial Modelling Services}
+}
+
+\begin{document}
+
+% ============================================================================
+% COVER PAGE
+% ============================================================================
+\thispagestyle{empty}
+
+% Navy background at bottom
+\AddToShipoutPictureBG*{%
+    \AtPageLowerLeft{%
+        \color{jaspernavy}\rule{\paperwidth}{0.35\paperheight}%
+    }%
+}
+
+\vspace*{3cm}
+
+\begin{center}
+    % Logo
+    \includegraphics[width=11cm]{../images/jasper-logo-horizontal.png}
+
+    \vspace{2.5cm}
+
+    % Main Title Box
+    \colorbox{jasperemerald}{%
+        \parbox{0.8\linewidth}{%
+            \centering\vspace{14pt}
+            \textcolor{white}{\fontsize{26}{32}\selectfont\bfseries Service Overview}\\[10pt]
+            \textcolor{white}{\large Investment-Grade Financial Modelling}
+            \vspace{14pt}
+        }%
+    }
+
+    \vspace{2.5cm}
+
+    % Tagline
+    {\Large\textcolor{jaspernavy}{\itshape ``Building financial models that secure funding''}}
+
+    \vfill
+
+    % Bottom section (on navy background)
+    \vspace*{2cm}
+    \textcolor{white}{\large\bfseries Gahn Eden (Pty) Ltd}\\[10pt]
+    \textcolor{jasperemerald}{\large jasperfinance.org}\\[6pt]
+    \textcolor{jasperslatelight}{Registration No. 2015/272887/07}
+
+    \vspace{1.5cm}
+\end{center}
+
+\newpage
+
+% ============================================================================
+% PAGE 2: WHO WE ARE
+% ============================================================================
+\pagestyle{fancy}
+
+\jaspersection{Who We Are}
+
+\textcolor{jaspernavy}{\bfseries\Large JASPER Financial Architecture} is a specialist financial modelling division of Gahn Eden (Pty) Ltd, a South African company established in 2015.
+
+\vspace{10pt}
+
+We build \jasperemph{DFI-grade financial models} that meet the rigorous standards required by Development Finance Institutions, commercial banks, and sophisticated investors.
+
+\vspace{16pt}
+
+% Two column layout with proper spacing
+\noindent
+\begin{minipage}[t]{0.47\linewidth}
+    \jasperinfo{
+        \textbf{\textcolor{jaspernavy}{Our Mission}}\\[6pt]
+        To democratise access to investment-grade financial modelling, enabling African entrepreneurs and infrastructure developers to present their projects with the same rigour as multinational corporations.
+    }
+\end{minipage}%
+\hfill%
+\begin{minipage}[t]{0.47\linewidth}
+    \jasperinfo{
+        \textbf{\textcolor{jaspernavy}{Key Facts}}\\[6pt]
+        \begin{tabular}{@{}ll@{}}
+            \jaspercheck & Established 2015\\[4pt]
+            \jaspercheck & 28-sheet standardised architecture\\[4pt]
+            \jaspercheck & DFI compliance focused\\[4pt]
+            \jaspercheck & South African owned\\
+        \end{tabular}
+    }
+\end{minipage}
+
+\vspace{16pt}
+
+\jaspersubsection{Our Methodology}
+
+\begin{itemize}[itemsep=2pt]
+    \item \textbf{Structured 28-sheet architecture} --- Comprehensive model organisation
+    \item \textbf{Automated build processes} --- Python/C\# ensures accuracy and speed
+    \item \textbf{AI-assisted document analysis} --- Intelligent data extraction
+    \item \textbf{Professional presentation standards} --- Investment-grade output
+\end{itemize}
+
+\vspace{16pt}
+
+\jaspersubsection{What Sets Us Apart}
+
+\noindent
+\begin{minipage}[t]{0.47\linewidth}
+    \colorbox{jasperemerald!10}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \vspace{6pt}
+            \textcolor{jasperemerald}{\bfseries\large 01}\\[2pt]
+            \textbf{Standardised Architecture}\\[2pt]
+            Our 28-sheet model structure ensures nothing is missed
+            \vspace{6pt}
+        }%
+    }
+
+    \vspace{8pt}
+
+    \colorbox{jasperemerald!10}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \vspace{6pt}
+            \textcolor{jasperemerald}{\bfseries\large 03}\\[2pt]
+            \textbf{Technology-Enabled}\\[2pt]
+            Python/C\# automation ensures accuracy and speed
+            \vspace{6pt}
+        }%
+    }
+\end{minipage}%
+\hfill%
+\begin{minipage}[t]{0.47\linewidth}
+    \colorbox{jasperemerald!10}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \vspace{6pt}
+            \textcolor{jasperemerald}{\bfseries\large 02}\\[2pt]
+            \textbf{DFI Experience}\\[2pt]
+            We understand what funders need to see
+            \vspace{6pt}
+        }%
+    }
+
+    \vspace{8pt}
+
+    \colorbox{jasperemerald!10}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \vspace{6pt}
+            \textcolor{jasperemerald}{\bfseries\large 04}\\[2pt]
+            \textbf{Full Transparency}\\[2pt]
+            Every formula auditable, every assumption documented
+            \vspace{6pt}
+        }%
+    }
+\end{minipage}
+
+\newpage
+
+% ============================================================================
+% PAGE 3: WHAT WE DO
+% ============================================================================
+
+\jaspersection{What We Do}
+
+We specialise in building \jasperemph{complete financial models} for infrastructure projects, real estate developments, manufacturing facilities, and agricultural ventures seeking DFI or commercial funding.
+
+\vspace{14pt}
+
+\jaspersubsection{Core Services}
+
+\noindent
+\begin{minipage}[t]{0.47\linewidth}
+    \jasperbox{
+        \textbf{\textcolor{jaspernavy}{\large Financial Model Development}}\\[10pt]
+        Complete 28-sheet financial models built from scratch, tailored to your project and target funder requirements.\\[10pt]
+        \textit{\small Includes: CAPEX schedules, revenue projections, financial statements, DCF valuation, sensitivity scenarios.}
+    }
+
+    \vspace{14pt}
+
+    \jasperbox{
+        \textbf{\textcolor{jaspernavy}{\large Model Enhancement}}\\[10pt]
+        Upgrade existing models to meet DFI standards with improved structure, formulas, and presentation.\\[10pt]
+        \textit{\small Includes: Structure alignment, formula audit, circular reference resolution, documentation.}
+    }
+\end{minipage}%
+\hfill%
+\begin{minipage}[t]{0.47\linewidth}
+    \jasperbox{
+        \textbf{\textcolor{jaspernavy}{\large Due Diligence Support}}\\[10pt]
+        Assist your team during funder due diligence with model walkthroughs and query responses.\\[10pt]
+        \textit{\small Includes: Funder presentations, query management, sensitivity updates, scenario modelling.}
+    }
+
+    \vspace{14pt}
+
+    \jasperbox{
+        \textbf{\textcolor{jaspernavy}{\large Training \& Handover}}\\[10pt]
+        Ensure your team can maintain and update the model confidently after delivery.\\[10pt]
+        \textit{\small Includes: Walkthrough sessions, user guides, input training, ongoing support.}
+    }
+\end{minipage}
+
+\vspace{20pt}
+
+\jaspersubsection{Sectors We Serve}
+
+\begin{center}
+\begin{tabular}{ccccc}
+    \colorbox{jaspernavy!8}{\parbox{2.8cm}{\centering\vspace{10pt}\textcolor{jaspernavy}{\bfseries Infrastructure}\\\small Roads, Energy, Water\vspace{10pt}}} &
+    \colorbox{jaspernavy!8}{\parbox{2.8cm}{\centering\vspace{10pt}\textcolor{jaspernavy}{\bfseries Real Estate}\\\small Commercial, Industrial\vspace{10pt}}} &
+    \colorbox{jaspernavy!8}{\parbox{2.8cm}{\centering\vspace{10pt}\textcolor{jaspernavy}{\bfseries Agriculture}\\\small Farms, Processing\vspace{10pt}}} &
+    \colorbox{jaspernavy!8}{\parbox{2.8cm}{\centering\vspace{10pt}\textcolor{jaspernavy}{\bfseries Manufacturing}\\\small Factories, Plants\vspace{10pt}}} &
+    \colorbox{jaspernavy!8}{\parbox{2.8cm}{\centering\vspace{10pt}\textcolor{jaspernavy}{\bfseries Social}\\\small Schools, Healthcare\vspace{10pt}}}
+\end{tabular}
+\end{center}
+
+\newpage
+
+% ============================================================================
+% PAGE 4: OUR METHODOLOGY - 28 SHEET ARCHITECTURE
+% ============================================================================
+
+\jaspersection{The 28-Sheet Architecture}
+
+\vspace{8pt}
+
+The JASPER 28-Sheet Architecture is our proprietary model structure that organises all project financials into \jasperemph{eight logical categories}. This ensures complete audit trails, balanced financial statements, and professional presentation.
+
+\vspace{20pt}
+
+\begin{center}
+\includegraphics[width=0.95\linewidth]{../images/jasper-28-sheet-architecture-colorful.png}
+\end{center}
+
+\vspace{16pt}
+
+\jaspersubsection{Key Model Principles}
+
+\vspace{8pt}
+
+\noindent
+\begin{minipage}[t]{0.47\linewidth}
+    \begin{enumerate}[leftmargin=*, itemsep=6pt]
+        \item \textbf{One-Way Referencing} --- Each sheet only references sheets above it
+        \item \textbf{Single Circular} --- Only Debt $\leftrightarrow$ Interest $\leftrightarrow$ Cash
+        \item \textbf{No Hardcoding} --- All inputs in Assumptions sheet
+        \item \textbf{Named Ranges} --- Clear formula references
+    \end{enumerate}
+\end{minipage}%
+\hfill%
+\begin{minipage}[t]{0.47\linewidth}
+    \begin{enumerate}[leftmargin=*, itemsep=6pt, start=5]
+        \item \textbf{Balance Must Balance} --- Assets = Liabilities + Equity
+        \item \textbf{Cash Reconciles} --- Movement equals BS change
+        \item \textbf{Full Documentation} --- Every assumption sourced
+        \item \textbf{DFI Compliance} --- Meets funder requirements
+    \end{enumerate}
+\end{minipage}
+
+\newpage
+
+% ============================================================================
+% PAGE 5: SERVICE PACKAGES
+% ============================================================================
+
+\jaspersection{Service Packages}
+
+\vspace{8pt}
+
+We offer three service tiers to match different project stages and requirements:
+
+\vspace{16pt}
+
+% Package comparison table
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{4cm}|>{\centering\arraybackslash}p{3.2cm}|>{\centering\arraybackslash}p{3.2cm}|>{\centering\arraybackslash}p{3.2cm}|}
+    \hline
+    \rowcolor{jaspernavy} \textcolor{white}{\bfseries Feature} & \textcolor{white}{\bfseries Starter} & \textcolor{white}{\bfseries Professional} & \textcolor{white}{\bfseries Enterprise} \\
+    \hline
+    \rowcolor{jaspergray} \multicolumn{4}{|l|}{\textcolor{jaspernavy}{\bfseries Model Scope}} \\
+    \hline
+    Number of Sheets & 15--18 & Full 28 & Full 28+ \\
+    \hline
+    Scenario Analysis & Base only & 3 scenarios & Unlimited \\
+    \hline
+    Sensitivity Tables & Basic & Comprehensive & Custom \\
+    \hline
+    \rowcolor{jaspergray} \multicolumn{4}{|l|}{\textcolor{jaspernavy}{\bfseries Deliverables}} \\
+    \hline
+    Excel Model & \jaspercheck & \jaspercheck & \jaspercheck \\
+    \hline
+    User Guide & Basic & Detailed & Custom \\
+    \hline
+    Presentation Deck & \jasperx & \jaspercheck & \jaspercheck \\
+    \hline
+    \rowcolor{jaspergray} \multicolumn{4}{|l|}{\textcolor{jaspernavy}{\bfseries Support}} \\
+    \hline
+    Revisions & 2 rounds & 4 rounds & Unlimited \\
+    \hline
+    Training Session & 1 hour & 3 hours & Custom \\
+    \hline
+    Post-delivery Support & 30 days & 90 days & 12 months \\
+    \hline
+    \rowcolor{jasperemerald!15} \textbf{Typical Project Size} & \textbf{< R20M} & \textbf{R20M -- R200M} & \textbf{> R200M} \\
+    \hline
+\end{tabular}
+\end{center}
+
+\vspace{24pt}
+
+\jaspersubsection{Which Package Is Right For You?}
+
+\vspace{12pt}
+
+\noindent
+\begin{minipage}[t]{0.31\linewidth}
+    \colorbox{jaspergray}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \centering\vspace{12pt}
+            \textcolor{jaspernavy}{\bfseries\large Starter}\\[8pt]
+            \small Ideal for early-stage projects seeking initial funding or internal decision-making.\\[8pt]
+            \textit{\footnotesize SMEs, startups, proof-of-concept}
+            \vspace{12pt}
+        }%
+    }
+\end{minipage}%
+\hfill%
+\begin{minipage}[t]{0.31\linewidth}
+    \colorbox{jasperemerald!15}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \centering\vspace{12pt}
+            \textcolor{jaspernavy}{\bfseries\large Professional}\\[8pt]
+            \small Complete DFI-grade model for serious funding applications.\\[8pt]
+            \textit{\footnotesize Growth companies, DFI applicants}
+            \vspace{12pt}
+        }%
+    }
+\end{minipage}%
+\hfill%
+\begin{minipage}[t]{0.31\linewidth}
+    \colorbox{jaspergray}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \centering\vspace{12pt}
+            \textcolor{jaspernavy}{\bfseries\large Enterprise}\\[8pt]
+            \small Full partnership for complex, high-value transactions.\\[8pt]
+            \textit{\footnotesize Large corporates, PPPs}
+            \vspace{12pt}
+        }%
+    }
+\end{minipage}
+
+\newpage
+
+% ============================================================================
+% PAGE 6: OUR PROCESS
+% ============================================================================
+
+\jaspersection{Our Process}
+
+\vspace{8pt}
+
+Working with JASPER is straightforward. Here's what to expect:
+
+\vspace{20pt}
+
+% Process steps
+\noindent
+\begin{tabularx}{\linewidth}{@{}c@{\hspace{16pt}}X@{}}
+    \colorbox{jasperemerald}{\makebox[2em]{\textcolor{white}{\bfseries\large 1}}} &
+    \textbf{\textcolor{jaspernavy}{\large Discovery}}\\
+    & Initial consultation to understand your project, funding targets, and timeline \\[14pt]
+
+    \colorbox{jasperemerald}{\makebox[2em]{\textcolor{white}{\bfseries\large 2}}} &
+    \textbf{\textcolor{jaspernavy}{\large Proposal}}\\
+    & Clear scope, deliverables, and pricing confirmed within 48 hours \\[14pt]
+
+    \colorbox{jasperemerald}{\makebox[2em]{\textcolor{white}{\bfseries\large 3}}} &
+    \textbf{\textcolor{jaspernavy}{\large Data Collection}}\\
+    & We guide you through required documents via our secure portal \\[14pt]
+
+    \colorbox{jasperemerald}{\makebox[2em]{\textcolor{white}{\bfseries\large 4}}} &
+    \textbf{\textcolor{jaspernavy}{\large Model Build}}\\
+    & Our team develops your model with regular progress updates \\[14pt]
+
+    \colorbox{jasperemerald}{\makebox[2em]{\textcolor{white}{\bfseries\large 5}}} &
+    \textbf{\textcolor{jaspernavy}{\large Delivery}}\\
+    & Review, revision, training, and full handover with documentation \\
+\end{tabularx}
+
+\vspace{30pt}
+
+\jaspersubsection{What We Need From You}
+
+\vspace{12pt}
+
+\noindent
+\begin{minipage}[t]{0.47\linewidth}
+    \textbf{\textcolor{jaspernavy}{Project Information}}
+    \begin{itemize}[itemsep=4pt]
+        \item Business plan or concept note
+        \item Technical specifications
+        \item Site/location details
+        \item Implementation timeline
+    \end{itemize}
+
+    \vspace{12pt}
+
+    \textbf{\textcolor{jaspernavy}{Cost Information}}
+    \begin{itemize}[itemsep=4pt]
+        \item CAPEX quotations or estimates
+        \item Staffing plan and salary benchmarks
+        \item Operating cost estimates
+    \end{itemize}
+\end{minipage}%
+\hfill%
+\begin{minipage}[t]{0.47\linewidth}
+    \textbf{\textcolor{jaspernavy}{Revenue Information}}
+    \begin{itemize}[itemsep=4pt]
+        \item Product/service offerings
+        \item Pricing strategy
+        \item Market size estimates
+        \item Sales projections
+    \end{itemize}
+
+    \vspace{12pt}
+
+    \textbf{\textcolor{jaspernavy}{Funding Requirements}}
+    \begin{itemize}[itemsep=4pt]
+        \item Target funder(s) if known
+        \item Equity available
+        \item Debt tolerance
+    \end{itemize}
+\end{minipage}
+
+\vspace{20pt}
+
+\jasperbox{
+    \textbf{\textcolor{jaspernavy}{Don't have everything?}} That's okay. We can work with incomplete information and help you identify gaps. Our document collection process guides you through exactly what's needed.
+}
+
+\newpage
+
+% ============================================================================
+% PAGE 7: CONTACT
+% ============================================================================
+
+\jaspersection{Get Started Today}
+
+\vspace{8pt}
+
+Ready to build a financial model that secures funding? Let's talk.
+
+\vspace{30pt}
+
+\begin{center}
+% Contact card
+\colorbox{jaspernavy}{%
+    \parbox{0.85\linewidth}{%
+        \centering\vspace{20pt}
+
+        % Logo
+        \includegraphics[width=3cm]{../images/jasper-logo-white.png}\\[12pt]
+
+        \textcolor{white}{\fontsize{20}{24}\selectfont\bfseries JASPER Financial Architecture}\\[14pt]
+
+        \textcolor{jasperemerald}{\large A division of Gahn Eden (Pty) Ltd}\\[20pt]
+
+        \begin{tabular}{cl}
+            \textcolor{jasperemerald}{\bfseries Email} & \textcolor{white}{models@jasperfinance.org} \\[8pt]
+            \textcolor{jasperemerald}{\bfseries Web} & \textcolor{white}{jasperfinance.org} \\[8pt]
+            \textcolor{jasperemerald}{\bfseries Location} & \textcolor{white}{Johannesburg, South Africa} \\
+        \end{tabular}
+
+        \vspace{20pt}
+    }%
+}
+\end{center}
+
+\vspace{30pt}
+
+% Trust builders
+\begin{center}
+\jasperinfo{
+    \centering
+    \textbf{\textcolor{jaspernavy}{\large Why Clients Trust JASPER}}\\[14pt]
+    \begin{tabular}{ccc}
+        \begin{minipage}{4.5cm}\centering\jaspercheck\\[6pt]\small Structured methodology\end{minipage} &
+        \begin{minipage}{4.5cm}\centering\jaspercheck\\[6pt]\small DFI-grade standards\end{minipage} &
+        \begin{minipage}{4.5cm}\centering\jaspercheck\\[6pt]\small Full transparency\end{minipage}
+    \end{tabular}
+}
+\end{center}
+
+\vspace{20pt}
+
+% Footer
+\jasperfooter
+
+\end{document}

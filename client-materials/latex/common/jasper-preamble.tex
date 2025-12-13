@@ -1,0 +1,270 @@
+% ============================================================================
+% JASPER Financial Architecture - Shared LaTeX Preamble
+% ============================================================================
+% Include this in all JASPER documents with: \input{common/jasper-preamble}
+% ============================================================================
+
+% Page geometry - A4 with professional margins
+\usepackage[a4paper, margin=1in, top=1.2in, bottom=1in]{geometry}
+
+% Fonts - Professional sans-serif
+\usepackage{fontspec}
+\setmainfont{Helvetica Neue}[
+    BoldFont = Helvetica Neue Bold,
+    ItalicFont = Helvetica Neue Italic,
+    BoldItalicFont = Helvetica Neue Bold Italic
+]
+\setsansfont{Helvetica Neue}
+
+% ============================================================================
+% JASPER Brand Colours
+% ============================================================================
+\usepackage{xcolor}
+
+% Primary colours
+\definecolor{jaspernavy}{HTML}{0F2A3C}
+\definecolor{jasperemerald}{HTML}{2C8A5B}
+\definecolor{jasperemeralddark}{HTML}{1E6B45}
+
+% Secondary colours
+\definecolor{jaspercarbon}{HTML}{1A1A2E}
+\definecolor{jaspergraphite}{HTML}{2D3748}
+\definecolor{jasperslate}{HTML}{64748B}
+\definecolor{jasperslatelight}{HTML}{94A3B8}
+
+% Surface colours
+\definecolor{jaspergray}{HTML}{F8FAFC}
+\definecolor{jaspergray100}{HTML}{F1F5F9}
+
+% Accent colours
+\definecolor{jaspergold}{HTML}{F59E0B}
+\definecolor{jasperblue}{HTML}{3B82F6}
+\definecolor{jasperpurple}{HTML}{8B5CF6}
+\definecolor{jasperred}{HTML}{EF4444}
+\definecolor{jasperorange}{HTML}{F97316}
+\definecolor{jaspercyan}{HTML}{06B6D4}
+
+% ============================================================================
+% Graphics and Images
+% ============================================================================
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
+
+% For landscape pages within portrait documents
+\usepackage{pdflscape}
+
+% Background elements
+\usepackage{eso-pic}
+
+% Letter spacing for typography
+\usepackage{letterspace}
+
+% ============================================================================
+% Tables and Formatting
+% ============================================================================
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{multirow}
+\usepackage{longtable}
+
+% Better column types
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+% ============================================================================
+% Lists
+% ============================================================================
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=*, itemsep=4pt, topsep=6pt}
+\setlist[enumerate]{leftmargin=*, itemsep=4pt, topsep=6pt}
+
+% Custom bullet style
+\setlist[itemize,1]{label=\textcolor{jasperemerald}{\textbullet}}
+\setlist[itemize,2]{label=\textcolor{jasperslate}{\textendash}}
+
+% ============================================================================
+% Hyperlinks
+% ============================================================================
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=jasperemerald,
+    urlcolor=jasperemerald,
+    filecolor=jasperemerald,
+    citecolor=jasperemerald,
+    pdfauthor={JASPER Financial Architecture},
+    pdfcreator={Kutlwano Holdings (Pty) Ltd}
+}
+
+% ============================================================================
+% Headers and Footers
+% ============================================================================
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+% Default page style
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Footer content
+\fancyfoot[L]{\textcolor{jasperslate}{\small JASPER Financial Architecture}}
+\fancyfoot[C]{\textcolor{jasperslate}{\small jasperfinance.org}}
+\fancyfoot[R]{\textcolor{jasperslate}{\small Page \thepage\ of \pageref{LastPage}}}
+
+% Plain style for cover pages
+\fancypagestyle{plain}{
+    \fancyhf{}
+    \renewcommand{\headrulewidth}{0pt}
+    \renewcommand{\footrulewidth}{0pt}
+}
+
+% ============================================================================
+% Section Formatting
+% ============================================================================
+\usepackage{titlesec}
+
+% Section style
+\titleformat{\section}
+    {\Large\bfseries\color{jaspernavy}}
+    {}
+    {0pt}
+    {}
+\titlespacing*{\section}{0pt}{20pt}{10pt}
+
+% Subsection style
+\titleformat{\subsection}
+    {\large\bfseries\color{jaspernavy}}
+    {}
+    {0pt}
+    {}
+\titlespacing*{\subsection}{0pt}{16pt}{8pt}
+
+% Subsubsection style
+\titleformat{\subsubsection}
+    {\normalsize\bfseries\color{jaspergraphite}}
+    {}
+    {0pt}
+    {}
+\titlespacing*{\subsubsection}{0pt}{12pt}{6pt}
+
+% ============================================================================
+% Custom Commands - Boxes and Highlights
+% ============================================================================
+
+% Emerald highlight box
+\newcommand{\jasperbox}[1]{%
+    \noindent\colorbox{jasperemerald!10}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \vspace{8pt}
+            #1
+            \vspace{8pt}
+        }%
+    }%
+}
+
+% Navy callout box
+\newcommand{\jaspercallout}[2]{%
+    \noindent\colorbox{jaspernavy}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \vspace{10pt}
+            \centering
+            \textcolor{white}{\bfseries\large #1}\\[6pt]
+            \textcolor{jasperemerald}{#2}
+            \vspace{10pt}
+        }%
+    }%
+}
+
+% Gray info box
+\newcommand{\jasperinfo}[1]{%
+    \noindent\colorbox{jaspergray}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \vspace{8pt}
+            \textcolor{jaspernavy}{#1}
+            \vspace{8pt}
+        }%
+    }%
+}
+
+% Section header with coloured background
+\newcommand{\jaspersection}[1]{%
+    \vspace{16pt}
+    \noindent\colorbox{jasperemerald}{%
+        \parbox{\dimexpr\linewidth-2\fboxsep}{%
+            \vspace{8pt}
+            \centering\textcolor{white}{\bfseries\large #1}%
+            \vspace{8pt}
+        }%
+    }\\[12pt]
+}
+
+% Subsection header with line
+\newcommand{\jaspersubsection}[1]{%
+    \vspace{12pt}
+    \noindent{\large\bfseries\textcolor{jaspernavy}{#1}}\\[-4pt]
+    \textcolor{jasperemerald}{\rule{\linewidth}{1pt}}\\[8pt]
+}
+
+% ============================================================================
+% Custom Commands - Typography
+% ============================================================================
+
+% JASPER wordmark
+\newcommand{\JASPER}{%
+    {\bfseries\textcolor{jaspernavy}{JASPER}}%
+}
+
+% Tagline
+\newcommand{\tagline}{%
+    {\small\textcolor{jasperslate}{FINANCIAL ARCHITECTURE}}%
+}
+
+% Emphasis
+\newcommand{\jasperemph}[1]{%
+    \textcolor{jasperemerald}{\bfseries #1}%
+}
+
+% ============================================================================
+% Custom Commands - Contact Block
+% ============================================================================
+\newcommand{\jaspercontact}{%
+    \begin{center}
+    \colorbox{jaspernavy}{%
+        \parbox{0.9\linewidth}{%
+            \centering\vspace{10pt}
+            \textcolor{white}{\bfseries Get Started with JASPER}\\[6pt]
+            \textcolor{jasperemerald}{models@jasperfinance.org}\\[4pt]
+            \textcolor{jasperslatelight}{\small jasperfinance.org}
+            \vspace{10pt}
+        }%
+    }
+    \end{center}
+}
+
+% ============================================================================
+% Custom Commands - Footer Block
+% ============================================================================
+\newcommand{\jasperfooter}{%
+    \vfill
+    \begin{center}
+    \textcolor{jasperslate}{\small\itshape JASPER Financial Architecture is a division of Gahn Eden (Pty) Ltd.}\\[4pt]
+    \textcolor{jasperslatelight}{\footnotesize Registration No. 2015/272887/07 | South Africa}
+    \end{center}
+}
+
+% ============================================================================
+% Custom Commands - Check marks
+% ============================================================================
+\usepackage{amssymb}
+\newcommand{\jaspercheck}{\textcolor{jasperemerald}{\checkmark}}
+\newcommand{\jasperx}{\textcolor{jasperred}{\texttimes}}
+
+% ============================================================================
+% End of Preamble
+% ============================================================================
