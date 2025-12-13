@@ -348,7 +348,7 @@ export default function PortalUsersPage() {
                   <div className="text-right hidden sm:block">
                     <p className="text-xs text-jasper-slate-light">Registered</p>
                     <p className="text-sm text-jasper-slate">
-                      {formatDate(user.created_at, 'short')}
+                      {formatDate(user.created_at)}
                     </p>
                   </div>
 
@@ -495,7 +495,7 @@ export default function PortalUsersPage() {
                     <div className="text-right hidden md:block">
                       <p className="text-xs text-jasper-slate-light">Last Login</p>
                       <p className="text-sm text-jasper-slate">
-                        {user.last_login ? formatDate(user.last_login, 'short') : 'Never'}
+                        {user.last_login ? formatDate(user.last_login) : 'Never'}
                       </p>
                       {user.login_count > 0 && (
                         <p className="text-xs text-jasper-slate-light">
@@ -508,7 +508,7 @@ export default function PortalUsersPage() {
                     <div className="text-right hidden lg:block">
                       <p className="text-xs text-jasper-slate-light">Registered</p>
                       <p className="text-sm text-jasper-slate">
-                        {formatDate(user.created_at, 'short')}
+                        {formatDate(user.created_at)}
                       </p>
                     </div>
 

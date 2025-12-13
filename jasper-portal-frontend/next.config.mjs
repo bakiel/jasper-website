@@ -1,22 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone', // For VPS deployment with PM2
   async rewrites() {
-    // Vercel API for OAuth endpoints
-    const vercelApiUrl = 'https://jasper-api.vercel.app'
-
-    // Use production API in production, local API in development
+    // VPS API URL - all routes go to jasper-api on port 3003
     const apiUrl = process.env.NODE_ENV === 'production'
-      ? 'https://api.jasperfinance.org'
-      : 'http://127.0.0.1:8000'
+      ? 'http://127.0.0.1:3003'  // VPS: jasper-api running locally
+      : 'http://127.0.0.1:8000'  // Dev: FastAPI backend
 
     return [
-      // OAuth admin auth routes go to Vercel API (higher priority - listed first)
-      {
-        source: '/api/v1/admin/auth/:path*',
-        destination: `${vercelApiUrl}/api/v1/admin/auth/:path*`,
-      },
-      // All other API routes go to the local/production API
+      // All API routes proxy to jasper-api
       {
         source: '/api/:path*',
         destination: `${apiUrl}/api/:path*`,

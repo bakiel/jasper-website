@@ -5,15 +5,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {
   Sparkles,
-  FileText,
   FolderKanban,
-  MessageSquare,
   Download,
   ChevronRight,
   ArrowRight,
-  CheckCircle2,
   BookOpen,
   Shield,
+  FileText,
+  MessageSquare,
 } from 'lucide-react'
 
 interface WelcomeHeroProps {

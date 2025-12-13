@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p ${PORT:-3002}",
+    "start:vps": "PORT=3002 next start",
     "lint": "next lint",
     "test": "vitest",
     "test:run": "vitest run",

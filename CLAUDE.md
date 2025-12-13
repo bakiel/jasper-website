@@ -83,8 +83,11 @@ Text:       #1E293B
 jasper-financial-architecture/
 ├── app/                        # Marketing site pages (React/Vite)
 ├── components/                 # Marketing site components
-├── jasper-api/                 # Backend API (Vercel Serverless) → api.jasperfinance.org
-├── jasper-portal-frontend/     # Client Portal (Next.js) → portal.jasperfinance.org
+├── jasper-api/                 # Backend API (VPS + Vercel) → api.jasperfinance.org
+├── jasper-portal-frontend/     # Admin Portal (Next.js) → portal.jasperfinance.org
+├── jasper-client-portal/       # Client Portal (Next.js) → client.jasperfinance.org [NEW]
+├── jasper-crm/                 # CRM System (VPS) → Internal lead management
+├── aleph-ai/                   # AI Orchestration (VPS) → ai.jasperfinance.org
 ├── branding/
 │   ├── logos/                  # 3 core logo files (1.2MB)
 │   ├── infographics/           # JASPER architecture diagrams (52MB)
@@ -100,6 +103,57 @@ jasper-financial-architecture/
 - `dist/` - Build output (regeneratable)
 - `branding/jpeg/` - Duplicate JPEG versions
 - Bloated AI-generated logo files (50MB saved)
+
+---
+
+## CLIENT PORTAL (jasper-client-portal)
+
+**Purpose**: Client-facing portal for project tracking, document access, and communication.
+
+### Architecture
+- **Framework**: Next.js 14 (App Router)
+- **Auth**: Email/password + Google OAuth + LinkedIn OAuth
+- **API**: Uses same backend as admin portal (`/api/v1/client/*` endpoints)
+- **Token**: `client_token` in localStorage (separate from `admin_token`)
+
+### Key Files
+```
+jasper-client-portal/
+├── src/
+│   ├── app/
+│   │   ├── page.tsx            # Dashboard with projects, activity, stats
+│   │   ├── login/              # Login with OAuth + email
+│   │   ├── register/           # Registration with email verification
+│   │   ├── verify-email/       # Email verification flow
+│   │   ├── forgot-password/    # Password reset request
+│   │   └── reset-password/     # Password reset completion
+│   ├── lib/
+│   │   ├── api.ts              # All API calls + types
+│   │   └── auth-context.tsx    # Auth state management
+│   └── components/
+│       ├── OnboardingWelcome.tsx  # 5-step guided tour
+│       └── ErrorBoundary.tsx      # Global error handling
+├── next.config.mjs             # Security headers (CSP, X-Frame-Options)
+└── .env.example                # Environment configuration
+```
+
+### Client APIs (from api.ts)
+| API | Purpose |
+|-----|---------|
+| `clientAuthApi` | Login, register, OAuth, password reset |
+| `clientProjectsApi` | View projects, milestones, timeline |
+| `clientDocumentsApi` | View/upload documents |
+| `clientMessagesApi` | Send/receive messages with admin |
+| `clientNotificationsApi` | Real-time notifications |
+| `clientDashboardApi` | Dashboard stats, activity feed |
+| `clientProfileApi` | Profile management, onboarding |
+
+### Security Features
+- Content Security Policy (CSP) headers
+- X-Frame-Options: DENY (prevents clickjacking)
+- Error boundary with graceful fallback
+- Token refresh flow for expired sessions
+- OAuth state validation (CSRF protection)
 
 ---
 
@@ -132,7 +186,8 @@ See: `/Users/mac/Downloads/PURE_PYTHON_ARCHITECTURE_STRATEGY.md`
 ### Services Status
 | Service | Port | URL | Status |
 |---------|------|-----|--------|
-| jasper-portal | 3000 | https://portal.jasperfinance.org | PM2 |
+| jasper-portal (Admin) | 3000 | https://portal.jasperfinance.org | PM2 |
+| jasper-client-portal | 3002 | https://client.jasperfinance.org | PM2 |
 | jasper-api | 3001 | https://api.jasperfinance.org | PM2 |
 | jasper-crm | 8001 | Internal | systemd |
 | aleph-ai | 8000 | https://ai.jasperfinance.org | systemd |
@@ -209,7 +264,8 @@ ssh root@72.61.201.237 "cat /opt/seo-tools/outputs/your_keyword_keywords.csv"
 ## KEY URLs
 
 - **Main Site**: https://jasperfinance.org (Vercel)
-- **Client Portal**: https://portal.jasperfinance.org (VPS)
+- **Admin Portal**: https://portal.jasperfinance.org (VPS)
+- **Client Portal**: https://client.jasperfinance.org (VPS) [NEW]
 - **API**: https://api.jasperfinance.org (VPS)
 - **ALEPH AI**: https://ai.jasperfinance.org (VPS)
 - **VPS IP**: 72.61.201.237
@@ -224,6 +280,33 @@ Admin Login:
 ---
 
 ## COMPLETED WORK LOG
+
+### 2025-12-12: Client Portal Integration & Security Audit
+
+**Client Portal (jasper-client-portal) Updates:**
+| Feature | Files Modified | Description |
+|---------|----------------|-------------|
+| API Unification | `src/lib/api.ts` | Integrated with admin backend using `/api/v1/client/*` endpoints |
+| Client APIs | `src/lib/api.ts` | Added projectsApi, documentsApi, messagesApi, notificationsApi, dashboardApi, profileApi |
+| Dashboard Data | `src/app/page.tsx` | Connected to real APIs with proper data fetching |
+| Security Headers | `next.config.mjs` | Added CSP, X-Frame-Options, XSS protection |
+| Error Boundary | `src/components/ErrorBoundary.tsx` | Global error handling with retry |
+| Environment Config | `.env.example` | Documented required environment variables |
+
+**Security Audit Results (via specialized agents):**
+- **Critical Issues Fixed**: Security headers, error boundary, environment config
+- **High Priority Documented**: Token storage recommendations, CSRF notes for backend
+- **Build Status**: PASS (0 errors, 0 warnings)
+- **Type Safety**: PASS (strict TypeScript)
+- **Overall Grade**: Production-ready with minor backend improvements needed
+
+**Documentation Updates:**
+- Updated PROJECT STRUCTURE with all services
+- Added CLIENT PORTAL section with full architecture docs
+- Updated VPS INFRASTRUCTURE with client portal (port 3002)
+- Updated KEY URLs with client portal domain
+
+---
 
 ### 2025-12-11: Security Hardening & VPS Deployment
 

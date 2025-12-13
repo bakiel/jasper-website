@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
@@ -9,10 +9,7 @@ import {
   FileText,
   Download,
   FolderOpen,
-  Filter,
   Search,
-  ChevronRight,
-  Clock,
   FileSpreadsheet,
   FileIcon,
   FileImage,
@@ -114,10 +111,22 @@ function getFileIcon(extension: string): typeof FileText {
 }
 
 // ============================================
-// MAIN COMPONENT
+// LOADING COMPONENT
 // ============================================
 
-export default function DocumentsPage() {
+function DocumentsLoading() {
+  return (
+    <div className="min-h-screen bg-jasper-navy flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-jasper-emerald animate-spin" />
+    </div>
+  )
+}
+
+// ============================================
+// INNER COMPONENT (uses useSearchParams)
+// ============================================
+
+function DocumentsContent() {
   const { user, isLoading, logout } = useAuth()
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab') || 'projects'
@@ -131,13 +140,6 @@ export default function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dataLoading, setDataLoading] = useState(true)
   const [documentsLoading, setDocumentsLoading] = useState(false)
-
-  // Fetch projects on mount
-  useEffect(() => {
-    if (user && !isLoading) {
-      fetchProjects()
-    }
-  }, [user, isLoading])
 
   const fetchProjects = async () => {
     setDataLoading(true)
@@ -155,11 +157,20 @@ export default function DocumentsPage() {
     }
   }
 
+  // Fetch projects on mount
+  useEffect(() => {
+    if (user && !isLoading) {
+      fetchProjects()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isLoading])
+
   // Fetch documents when project is selected
   useEffect(() => {
     if (selectedProjectId) {
       fetchDocuments(selectedProjectId)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProjectId])
 
   const fetchDocuments = async (projectId: number) => {
@@ -593,5 +604,17 @@ export default function DocumentsPage() {
         </main>
       </div>
     </div>
+  )
+}
+
+// ============================================
+// MAIN EXPORT (wraps with Suspense)
+// ============================================
+
+export default function DocumentsPage() {
+  return (
+    <Suspense fallback={<DocumentsLoading />}>
+      <DocumentsContent />
+    </Suspense>
   )
 }
