@@ -1,0 +1,154 @@
+# JASPER System - Traefik Dynamic Configuration
+# Lead Gen System + Portal Architecture + Client Portal
+http:
+  routers:
+    # Main domain - JASPER Lead Gen API
+    jasper-main:
+      rule: "Host(`jasperfinance.org`) || Host(`www.jasperfinance.org`)"
+      entryPoints:
+        - web
+        - websecure
+      service: jasper-leadgen-service
+      tls:
+        certResolver: mytlschallenge
+      middlewares:
+        - jasper-headers
+
+    # Leads API subdomain
+    jasper-leads-api:
+      rule: "Host(`leads.jasperfinance.org`)"
+      entryPoints:
+        - web
+        - websecure
+      service: jasper-leadgen-service
+      tls:
+        certResolver: mytlschallenge
+      middlewares:
+        - jasper-cors
+
+    # API subdomain - JASPER Express API on port 3003
+    jasper-api:
+      rule: "Host(`api.jasperfinance.org`)"
+      entryPoints:
+        - web
+        - websecure
+      service: jasper-api-service
+      tls:
+        certResolver: mytlschallenge
+      middlewares:
+        - jasper-cors
+
+    # Portal subdomain - Next.js Admin on port 3002
+    jasper-portal:
+      rule: "Host(`portal.jasperfinance.org`)"
+      entryPoints:
+        - web
+        - websecure
+      service: jasper-portal-service
+      tls:
+        certResolver: mytlschallenge
+      middlewares:
+        - jasper-headers
+
+    # Client Portal subdomain - Next.js Client on port 3004
+    jasper-client:
+      rule: "Host(`client.jasperfinance.org`)"
+      entryPoints:
+        - web
+        - websecure
+      service: jasper-client-service
+      tls:
+        certResolver: mytlschallenge
+      middlewares:
+        - jasper-headers
+
+    aleph-ai:
+      rule: "Host(`ai.jasperfinance.org`)"
+      entryPoints:
+        - web
+        - websecure
+      service: jasper-leadgen-service
+      tls:
+        certResolver: mytlschallenge
+      middlewares:
+        - jasper-cors
+
+    jasper-social:
+      rule: "Host(`social.jasperfinance.org`)"
+      entryPoints:
+        - web
+        - websecure
+      service: jasper-social-service
+      tls:
+        certResolver: mytlschallenge
+      middlewares:
+        - jasper-cors
+
+  services:
+    # JASPER Lead Gen FastAPI on port 8000
+    jasper-leadgen-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8000"
+
+    # JASPER Express API on port 3003
+    jasper-api-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:3003"
+        healthCheck:
+          path: /health
+          interval: "30s"
+          timeout: "5s"
+
+    # JASPER Admin Portal (Next.js) on port 3002
+    jasper-portal-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:3002"
+        healthCheck:
+          path: /
+          interval: "30s"
+          timeout: "5s"
+
+    # JASPER Client Portal (Next.js) on port 3004
+    jasper-client-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:3004"
+        healthCheck:
+          path: /
+          interval: "30s"
+          timeout: "5s"
+
+    jasper-social-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8002"
+
+  middlewares:
+    jasper-headers:
+      headers:
+        sslRedirect: true
+        stsSeconds: 315360000
+        browserXssFilter: true
+        contentTypeNosniff: true
+
+    jasper-cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Content-Type
+          - Authorization
+        accessControlAllowOriginList:
+          - "https://jasperfinance.org"
+          - "https://portal.jasperfinance.org"
+          - "https://client.jasperfinance.org"
+          - "http://localhost:3000"
+          - "http://localhost:3002"
+          - "http://localhost:3004"

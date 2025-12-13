@@ -2,187 +2,282 @@
 
 ## Overview
 
-The JASPER system consists of three deployable applications:
+The JASPER system runs on a Hostinger VPS (72.61.201.237) with Cloudflare for DNS and SSL termination.
 
-| Application | Type | Domain | Vercel Project |
-|------------|------|--------|----------------|
-| jasper-api | FastAPI | api.jasperfinance.org | jasper-api |
-| jasper-portal | FastAPI | portal-api.jasperfinance.org | jasper-portal |
-| jasper-portal-frontend | Next.js | portal.jasperfinance.org | jasper-portal-frontend |
+### Applications
+
+| Application | Type | Domain | Port | PM2 Name |
+|------------|------|--------|------|----------|
+| jasper-api | Express/Node.js | api.jasperfinance.org | 3003 | jasper-api |
+| jasper-portal-frontend | Next.js | portal.jasperfinance.org | 3002 | jasper-portal |
+| jasper-client-portal | Next.js | client.jasperfinance.org | 3004 | jasper-client |
+| jasper-leadgen | FastAPI | leads.jasperfinance.org | 8000 | (Python) |
+
+---
+
+## VPS Architecture
+
+```
+                    ┌──────────────────────────────────────────────────────────┐
+                    │                     CLOUDFLARE                            │
+                    │  (DNS + CDN + SSL Termination)                            │
+                    └──────────────────────────────────────────────────────────┘
+                                           │
+                                           ▼
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                            VPS: 72.61.201.237                                        │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                      │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐  │
+│   │                           TRAEFIK (Docker)                                    │  │
+│   │                      Ports 80, 443 → Internal routing                        │  │
+│   └──────────────────────────────────────────────────────────────────────────────┘  │
+│                                       │                                              │
+│           ┌───────────────────────────┼───────────────────────────┐                 │
+│           ▼                           ▼                           ▼                 │
+│   ┌───────────────┐         ┌───────────────┐           ┌───────────────┐          │
+│   │  jasper-api   │         │ jasper-portal │           │ jasper-client │          │
+│   │    :3003      │         │    :3002      │           │    :3004      │          │
+│   │   Express     │         │   Next.js     │           │   Next.js     │          │
+│   └───────────────┘         └───────────────┘           └───────────────┘          │
+│                                                                                      │
+│                          Managed by PM2                                              │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## PM2 Management
+
+### View Status
+```bash
+ssh root@72.61.201.237
+cd /root/jasper-financial-architecture
+pm2 status
+```
+
+### Restart All Applications
+```bash
+pm2 restart all
+```
+
+### Restart Specific Application
+```bash
+pm2 restart jasper-api
+pm2 restart jasper-portal
+pm2 restart jasper-client
+```
+
+### View Logs
+```bash
+pm2 logs jasper-api
+pm2 logs jasper-portal --lines 100
+```
+
+### Save PM2 Configuration
+```bash
+pm2 save
+```
+
+---
+
+## Traefik Configuration
+
+Configuration file: `/root/traefik/jasper.yml`
+
+### Reload Configuration
+Traefik watches the dynamic config directory and auto-reloads. If needed, restart:
+```bash
+cd /root
+docker compose restart traefik
+```
+
+### View Traefik Logs
+```bash
+docker logs root-traefik-1 --tail 50
+```
 
 ---
 
 ## Environment Variables
 
-### jasper-api (Contact Form API)
+### jasper-api (.env.production)
 
-Set these in Vercel Dashboard → jasper-api → Settings → Environment Variables:
+Location: `/root/jasper-financial-architecture/jasper-api/.env.production`
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `DATABASE_URL` | Secret | PostgreSQL connection string |
-| `SECRET_KEY` | Secret | JWT signing key (generate with `openssl rand -hex 32`) |
-| `DEBUG` | Plain | Set to `false` for production |
-| `ALLOWED_ORIGINS` | Plain | `https://jasperfinance.org,https://www.jasperfinance.org` |
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Neon PostgreSQL connection string |
+| `JWT_SECRET` | JWT signing key |
+| `RESEND_API_KEY` | Resend email service API key |
+| `ADMIN_NOTIFICATION_EMAIL` | Admin email for notifications |
 
-### jasper-portal (Admin API)
+### jasper-portal-frontend (.env.production)
 
-Set these in Vercel Dashboard → jasper-portal → Settings → Environment Variables:
+Location: `/root/jasper-financial-architecture/jasper-portal-frontend/.env.production`
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `DATABASE_URL` | Secret | PostgreSQL connection string |
-| `SECRET_KEY` | Secret | JWT signing key (generate with `openssl rand -hex 32`) |
-| `SMTP_HOST` | Plain | Email server host (e.g., `smtp.gmail.com`) |
-| `SMTP_PORT` | Plain | Email server port (e.g., `587`) |
-| `SMTP_USER` | Secret | Email username |
-| `SMTP_PASSWORD` | Secret | Email password or app password |
-| `OPENROUTER_API_KEY` | Secret | OpenRouter API key for AI features |
-| `DEBUG` | Plain | Set to `false` for production |
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | `https://api.jasperfinance.org` |
+| `NEXTAUTH_URL` | `https://portal.jasperfinance.org` |
+| `NEXTAUTH_SECRET` | NextAuth secret key |
 
-### jasper-portal-frontend (Admin Dashboard)
+### jasper-client-portal (.env.production)
 
-Set these in Vercel Dashboard → jasper-portal-frontend → Settings → Environment Variables:
+Location: `/root/jasper-financial-architecture/jasper-client-portal/.env.production`
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `NEXT_PUBLIC_API_URL` | Plain | `https://portal-api.jasperfinance.org` |
-
----
-
-## Database Setup
-
-### Option 1: Vercel Postgres (Recommended)
-1. Go to Vercel Dashboard → Storage → Create Database → Postgres
-2. Connect to your projects
-3. The `DATABASE_URL` will be automatically set
-
-### Option 2: External PostgreSQL
-1. Use any PostgreSQL provider (Supabase, Neon, Railway, etc.)
-2. Get the connection string
-3. Add as `DATABASE_URL` environment variable
-
-### Database Migration
-After deployment, run migrations:
-```bash
-# For jasper-portal
-cd jasper-portal
-vercel env pull .env.local
-source venv/bin/activate
-alembic upgrade head
-```
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | `https://api.jasperfinance.org` |
+| `NEXTAUTH_URL` | `https://client.jasperfinance.org` |
+| `NEXTAUTH_SECRET` | NextAuth secret key |
 
 ---
 
 ## Deployment Steps
 
-### 1. Install Vercel CLI
+### 1. SSH to VPS
 ```bash
-npm i -g vercel
+ssh root@72.61.201.237
 ```
 
-### 2. Login to Vercel
+### 2. Pull Latest Code
 ```bash
-vercel login
+cd /root/jasper-financial-architecture
+git pull origin main
 ```
 
-### 3. Deploy jasper-api (Contact Form)
+### 3. Install Dependencies (if needed)
 ```bash
+# For jasper-api
 cd jasper-api
-vercel --prod
+npm install
+
+# For jasper-portal-frontend
+cd ../jasper-portal-frontend
+npm install
+npm run build
+
+# For jasper-client-portal
+cd ../jasper-client-portal
+npm install
+npm run build
 ```
 
-### 4. Deploy jasper-portal (Admin API)
+### 4. Restart Applications
 ```bash
-cd jasper-portal
-vercel --prod
+pm2 restart all
 ```
 
-### 5. Deploy jasper-portal-frontend (Admin Dashboard)
+---
+
+## DNS Configuration (Cloudflare)
+
+| Subdomain | Type | Target | Proxy |
+|-----------|------|--------|-------|
+| api | A | 72.61.201.237 | Proxied |
+| portal | A | 72.61.201.237 | Proxied |
+| client | A | 72.61.201.237 | Proxied |
+| leads | A | 72.61.201.237 | Proxied |
+
+---
+
+## Health Checks
+
+### API Health
 ```bash
-cd jasper-portal-frontend
-vercel --prod
+curl https://api.jasperfinance.org/health
 ```
 
----
+Expected response:
+```json
+{"status":"healthy","service":"JASPER Contact API","timestamp":"..."}
+```
 
-## Domain Configuration
-
-In Vercel Dashboard → Project → Settings → Domains:
-
-1. **jasper-api**: Add `api.jasperfinance.org`
-2. **jasper-portal**: Add `portal-api.jasperfinance.org`
-3. **jasper-portal-frontend**: Add `portal.jasperfinance.org`
-
-### DNS Records
-Add these DNS records at your domain registrar:
-
-| Type | Name | Value |
-|------|------|-------|
-| CNAME | api | cname.vercel-dns.com |
-| CNAME | portal-api | cname.vercel-dns.com |
-| CNAME | portal | cname.vercel-dns.com |
-
----
-
-## Post-Deployment Checklist
-
-- [ ] Environment variables configured in Vercel dashboard
-- [ ] Database connected and migrations run
-- [ ] Custom domains configured
-- [ ] SSL certificates verified (automatic via Vercel)
-- [ ] Test health endpoints:
-  - `https://api.jasperfinance.org/health`
-  - `https://portal-api.jasperfinance.org/health`
-  - `https://portal.jasperfinance.org`
-- [ ] Test admin login at `https://portal.jasperfinance.org/login`
-- [ ] Test contact form submission
-
----
-
-## Default Admin Credentials
-
-**Initial Admin Account** (change password after first login):
-- Email: `admin@jasperfinance.org`
-- Password: `JasperAdmin2025!`
+### Portal Access
+- Admin Portal: https://portal.jasperfinance.org
+- Client Portal: https://client.jasperfinance.org
 
 ---
 
 ## Troubleshooting
 
-### API Returns 500 Error
-- Check Vercel Functions logs in dashboard
-- Verify DATABASE_URL is correctly set
-- Ensure database is accessible from Vercel
+### Application Not Responding
+1. Check PM2 status: `pm2 status`
+2. Check logs: `pm2 logs <app-name>`
+3. Restart: `pm2 restart <app-name>`
 
-### CORS Errors
-- Verify CORS headers in vercel.json
-- Check ALLOWED_ORIGINS environment variable
+### 502 Bad Gateway
+1. Verify application is running: `pm2 status`
+2. Check if port is listening: `netstat -tlnp | grep 300`
+3. Check Traefik logs: `docker logs root-traefik-1`
 
-### Authentication Issues
-- Verify SECRET_KEY is consistent across deployments
-- Check token expiration settings
-- Verify API URL in frontend matches backend
+### SSL/Certificate Issues
+1. Verify Cloudflare SSL mode is "Full (strict)"
+2. Check Traefik certificate logs
+3. Ensure DNS is pointing to VPS IP
 
-### Build Failures
-- Check build logs in Vercel dashboard
-- Ensure all dependencies are in requirements.txt / package.json
-- Verify Python version (3.11) in vercel.json
+### Database Connection Issues
+1. Verify DATABASE_URL in .env.production
+2. Check Neon database status at console.neon.tech
+3. Test connection from VPS:
+   ```bash
+   node -e "require('@neondatabase/serverless').neon(process.env.DATABASE_URL)('SELECT 1').then(console.log)"
+   ```
 
 ---
 
-## Quick Deploy Commands
+## Quick Commands Reference
 
 ```bash
-# Deploy all applications at once
-cd jasper-financial-architecture
+# SSH to server
+ssh root@72.61.201.237
 
-# Deploy API
-cd jasper-api && vercel --prod && cd ..
+# Navigate to project
+cd /root/jasper-financial-architecture
 
-# Deploy Portal Backend
-cd jasper-portal && vercel --prod && cd ..
+# PM2 commands
+pm2 status                    # View all apps
+pm2 restart all               # Restart all
+pm2 logs jasper-api           # View API logs
+pm2 logs jasper-portal        # View portal logs
+pm2 logs jasper-client        # View client logs
 
-# Deploy Portal Frontend
-cd jasper-portal-frontend && vercel --prod && cd ..
+# Traefik commands
+docker logs root-traefik-1 --tail 50   # View logs
+docker compose restart traefik          # Restart
+
+# Git pull and deploy
+git pull origin main
+pm2 restart all
 ```
+
+---
+
+## Backup & Recovery
+
+### PM2 Process List
+```bash
+pm2 save
+# Saved to ~/.pm2/dump.pm2
+```
+
+### Restore PM2 Processes
+```bash
+pm2 resurrect
+```
+
+### Export Environment Files
+```bash
+# Backup all .env files
+tar -czf env-backup.tar.gz \
+  jasper-api/.env.production \
+  jasper-portal-frontend/.env.production \
+  jasper-client-portal/.env.production
+```
+
+---
+
+*Last Updated: December 13, 2025*
+*VPS: Hostinger 72.61.201.237*
+*Managed by: PM2 + Traefik + Cloudflare*

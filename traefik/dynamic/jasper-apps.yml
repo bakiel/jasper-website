@@ -1,0 +1,68 @@
+# JASPER Applications - Traefik Dynamic Configuration
+# Location on VPS: /root/traefik/dynamic/jasper-apps.yml
+
+http:
+  # ============================================
+  # ROUTERS
+  # ============================================
+  routers:
+    # JASPER API - api.jasperfinance.org
+    jasper-api:
+      rule: "Host(`api.jasperfinance.org`)"
+      service: jasper-api
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: mytlschallenge
+
+    # JASPER Admin Portal - portal.jasperfinance.org
+    jasper-portal:
+      rule: "Host(`portal.jasperfinance.org`)"
+      service: jasper-portal
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: mytlschallenge
+
+    # JASPER Client Portal - client.jasperfinance.org
+    jasper-client:
+      rule: "Host(`client.jasperfinance.org`)"
+      service: jasper-client
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: mytlschallenge
+
+  # ============================================
+  # SERVICES
+  # ============================================
+  services:
+    # JASPER API - Express server on port 3003
+    jasper-api:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3003"
+        healthCheck:
+          path: /health
+          interval: "30s"
+          timeout: "5s"
+
+    # JASPER Admin Portal - Next.js on port 3002
+    jasper-portal:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3002"
+        healthCheck:
+          path: /
+          interval: "30s"
+          timeout: "5s"
+
+    # JASPER Client Portal - Next.js on port 3004
+    jasper-client:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3004"
+        healthCheck:
+          path: /
+          interval: "30s"
+          timeout: "5s"
