@@ -873,23 +873,12 @@
             errorChart.update('none');
 
             // Update stats
-            document.getElementById('stat-requests').textContent = requests;
-            document.getElementById('stat-latency').textContent = latency + 'ms';
-            document.getElementById('stat-errors').textContent = errorData.reduce((a, b) => a + b, 0);
-
-            // Update service metrics
-            document.getElementById('crm-cpu').textContent = Math.floor(Math.random() * 30 + 10) + '%';
-            document.getElementById('crm-mem').textContent = Math.floor(Math.random() * 200 + 100) + 'MB';
-            document.getElementById('api-cpu').textContent = Math.floor(Math.random() * 20 + 5) + '%';
-            document.getElementById('api-mem').textContent = Math.floor(Math.random() * 150 + 80) + 'MB';
-            document.getElementById('admin-cpu').textContent = Math.floor(Math.random() * 15 + 5) + '%';
-            document.getElementById('admin-mem').textContent = Math.floor(Math.random() * 100 + 50) + 'MB';
-            document.getElementById('client-cpu').textContent = Math.floor(Math.random() * 15 + 5) + '%';
-            document.getElementById('client-mem').textContent = Math.floor(Math.random() * 100 + 50) + 'MB';
-            document.getElementById('main-cpu').textContent = Math.floor(Math.random() * 10 + 3) + '%';
-            document.getElementById('main-mem').textContent = Math.floor(Math.random() * 80 + 40) + 'MB';
-            document.getElementById('db-conn').textContent = Math.floor(Math.random() * 15 + 5);
-            document.getElementById('db-size').textContent = Math.floor(Math.random() * 50 + 100) + 'MB';
+            const reqEl = document.getElementById('stat-requests');
+            const latEl = document.getElementById('stat-latency');
+            const errEl = document.getElementById('stat-errors');
+            if (reqEl) reqEl.textContent = requests;
+            if (latEl) latEl.textContent = latency + 'ms';
+            if (errEl) errEl.textContent = errorData.reduce((a, b) => a + b, 0);
         }
 
         // Simulate activity events
