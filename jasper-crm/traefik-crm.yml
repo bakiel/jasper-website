@@ -1,0 +1,55 @@
+# JASPER CRM Traefik Configuration
+# Copy to /root/traefik/jasper-crm.yml on VPS
+
+http:
+  routers:
+    # CRM API - accessible at crm.jasperfinance.org
+    jasper-crm-api:
+      rule: "Host(`crm.jasperfinance.org`)"
+      service: jasper-crm-service
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - crm-cors
+
+    # Alternatively, expose as path on main domain
+    jasper-crm-path:
+      rule: "Host(`jasperfinance.org`) && PathPrefix(`/crm-api`)"
+      service: jasper-crm-service
+      priority: 90
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - crm-cors
+        - crm-strip-prefix
+
+  services:
+    jasper-crm-service:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8001"
+
+  middlewares:
+    crm-cors:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "DELETE"
+          - "OPTIONS"
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-API-Key"
+        accessControlAllowOriginList:
+          - "https://jasperfinance.org"
+          - "https://portal.jasperfinance.org"
+          - "http://localhost:3000"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+    crm-strip-prefix:
+      stripPrefix:
+        prefixes:
+          - "/crm-api"

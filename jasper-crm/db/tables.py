@@ -18,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
-from models.lead import LeadStatus, LeadSource, LeadPriority, Sector, FundingStage
+from models.lead import LeadStatus, LeadSource, LeadPriority, Sector, FundingStage, LeadTier, ResearchStatus
 from models.notification import NotificationType, NotificationPriority
 from models.email_sequence import SequenceType, SequenceStatus, EmailStatus, TriggerType
 
@@ -53,6 +53,58 @@ class LeadTable(Base):
     ai_summary = Column(Text)
     ai_recommended_package = Column(String(50))
     estimated_value = Column(Float)
+
+    # === Lead Intelligence Agent Fields ===
+
+    # Lead Scoring (0-100)
+    score = Column(Integer, default=0, index=True)
+    tier = Column(SQLEnum(LeadTier), default=LeadTier.COLD, index=True)
+
+    # BANT Qualification (stored as JSON)
+    bant = Column(JSON, default={
+        "budget_qualified": False,
+        "budget_notes": None,
+        "authority_qualified": False,
+        "authority_notes": None,
+        "need_qualified": False,
+        "need_notes": None,
+        "timeline_qualified": False,
+        "timeline_notes": None,
+    })
+
+    # Research Agent
+    research_status = Column(SQLEnum(ResearchStatus), default=ResearchStatus.NONE, index=True)
+    last_researched_at = Column(DateTime(timezone=True))
+    company_info = Column(JSON)  # CompanyProfile as JSON
+    person_info = Column(JSON)   # PersonProfile as JSON
+    similar_deals = Column(JSON, default=[])  # List[SimilarDeal] as JSON
+
+    # Engagement Tracking
+    responded = Column(Boolean, default=False, index=True)
+    engagement_score = Column(Integer, default=0)
+    emails_opened = Column(Integer, default=0)
+    asked_about_pricing = Column(Boolean, default=False)
+
+    # Call Management
+    has_call_scheduled = Column(Boolean, default=False, index=True)
+    next_call_at = Column(DateTime(timezone=True))
+    total_calls = Column(Integer, default=0)
+
+    # Communication
+    linkedin = Column(String(500))
+    whatsapp_id = Column(String(50))
+    preferred_channel = Column(String(50))
+
+    # Project Details (for scoring)
+    project_type = Column(String(100))
+    deal_size = Column(Float)
+    timeline = Column(String(100))
+
+    # Follow-up
+    next_action = Column(String(500))
+    next_action_date = Column(DateTime(timezone=True))
+    sequence_id = Column(String(50))
+    sequence_step = Column(Integer, default=0)
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

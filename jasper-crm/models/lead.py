@@ -67,6 +67,73 @@ class LeadPriority(str, Enum):
     URGENT = "urgent"
 
 
+class LeadTier(str, Enum):
+    """Lead temperature tier based on score (0-100)"""
+    HOT = "hot"      # 70-100
+    WARM = "warm"    # 40-69
+    COLD = "cold"    # 0-39
+
+
+class ResearchStatus(str, Enum):
+    """Research agent status"""
+    NONE = "none"
+    LIGHT = "light"
+    DEEP = "deep"
+
+
+# --- BANT Qualification ---
+
+class BANTQualification(BaseModel):
+    """Budget, Authority, Need, Timeline qualification"""
+    budget_qualified: bool = False
+    budget_notes: Optional[str] = None
+    authority_qualified: bool = False
+    authority_notes: Optional[str] = None
+    need_qualified: bool = False
+    need_notes: Optional[str] = None
+    timeline_qualified: bool = False
+    timeline_notes: Optional[str] = None
+
+    @property
+    def is_fully_qualified(self) -> bool:
+        return all([
+            self.budget_qualified,
+            self.authority_qualified,
+            self.need_qualified,
+            self.timeline_qualified
+        ])
+
+
+class CompanyProfile(BaseModel):
+    """Company research profile"""
+    name: str
+    website: Optional[str] = None
+    industry: Optional[str] = None
+    description: Optional[str] = None
+    employee_count: Optional[str] = None
+    headquarters: Optional[str] = None
+    linkedin_url: Optional[str] = None
+
+
+class PersonProfile(BaseModel):
+    """Person research profile"""
+    name: str
+    role: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    bio: Optional[str] = None
+    experience: List[str] = Field(default_factory=list)
+
+
+class SimilarDeal(BaseModel):
+    """Similar deal from historical data"""
+    deal_name: str
+    company: str
+    deal_size: Optional[float] = None
+    dfi: Optional[str] = None
+    similarity_score: float = 0.0
+    outcome: str = "unknown"
+
+
 # --- Base Models ---
 
 class LeadBase(BaseModel):
@@ -136,6 +203,49 @@ class Lead(LeadBase):
     ai_summary: Optional[str] = None
     ai_recommended_package: Optional[str] = None  # Foundation/Professional/Enterprise
     estimated_value: Optional[float] = None  # ZAR
+
+    # === NEW: Lead Intelligence Agent Fields ===
+
+    # Lead Scoring (0-100)
+    score: int = Field(default=0, ge=0, le=100)
+    tier: LeadTier = LeadTier.COLD
+
+    # BANT Qualification
+    bant: BANTQualification = Field(default_factory=BANTQualification)
+
+    # Research Agent
+    research_status: ResearchStatus = ResearchStatus.NONE
+    last_researched_at: Optional[datetime] = None
+    company_info: Optional[CompanyProfile] = None
+    person_info: Optional[PersonProfile] = None
+    similar_deals: List[SimilarDeal] = Field(default_factory=list)
+
+    # Engagement Tracking
+    responded: bool = False
+    engagement_score: int = Field(default=0, ge=0, le=100)
+    emails_opened: int = 0
+    asked_about_pricing: bool = False
+
+    # Call Management
+    has_call_scheduled: bool = False
+    next_call_at: Optional[datetime] = None
+    total_calls: int = 0
+
+    # Communication
+    linkedin: Optional[str] = None
+    whatsapp_id: Optional[str] = None
+    preferred_channel: Optional[str] = None
+
+    # Project Details (for scoring)
+    project_type: Optional[str] = None
+    deal_size: Optional[float] = None
+    timeline: Optional[str] = None
+
+    # Follow-up
+    next_action: Optional[str] = None
+    next_action_date: Optional[datetime] = None
+    sequence_id: Optional[str] = None
+    sequence_step: int = 0
 
     class Config:
         from_attributes = True

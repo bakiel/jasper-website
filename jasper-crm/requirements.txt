@@ -20,6 +20,22 @@ python-dotenv==1.0.1
 
 # Security
 python-multipart==0.0.9
+PyJWT==2.8.0
 
 # Production Server
 gunicorn==21.2.0
+
+# Testing
+pytest==8.0.0
+pytest-asyncio==0.23.0
+pytest-cov==4.1.0
+httpx==0.26.0
+
+# Caching
+redis==5.0.1
+
+# Error Tracking
+sentry-sdk[fastapi]==1.40.0
+
+# RSS Feed Parsing (News Monitor)
+feedparser==6.0.10
