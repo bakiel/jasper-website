@@ -670,6 +670,9 @@
         // Initialize Lucide icons
         lucide.createIcons();
 
+        // CRM API Base URL
+        const CRM_API = 'https://crm.jasperfinance.org';
+
         // Chart.js global config
         Chart.defaults.color = '#64748B';
         Chart.defaults.borderColor = 'rgba(44, 138, 91, 0.1)';
@@ -904,10 +907,10 @@
             });
         }
 
-        // Fetch health status
+        // Fetch health status from CRM
         async function checkHealth() {
             try {
-                const response = await fetch('/health');
+                const response = await fetch(`${CRM_API}/health`);
                 const data = await response.json();
 
                 const statusEl = document.getElementById('system-status');
@@ -923,8 +926,37 @@
             }
         }
 
+        // Fetch Lead Prospector data
+        async function fetchProspectorData() {
+            try {
+                const response = await fetch(`${CRM_API}/api/v1/prospector/prospects?limit=10`);
+                const data = await response.json();
+
+                const leadsEl = document.getElementById('prospector-leads');
+                if (leadsEl && data.total !== undefined) {
+                    leadsEl.textContent = data.total;
+                }
+
+                // Add recent prospects to activity feed
+                if (data.prospects && data.prospects.length > 0) {
+                    const recent = data.prospects[0];
+                    addActivityEvent({
+                        type: 'ai',
+                        icon: 'search',
+                        color: 'text-jasper-emerald',
+                        message: `Lead: ${recent.title.substring(0, 50)}...`,
+                        time: new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                        status: recent.score
+                    });
+                }
+            } catch (error) {
+                console.log('Prospector fetch error:', error);
+            }
+        }
+
         // Initialize
         checkHealth();
+        fetchProspectorData();
 
         // Generate initial data
         for (let i = 0; i < 15; i++) {
@@ -935,9 +967,10 @@
         }
 
         // Update intervals
-        setInterval(fetchMetrics, 5000);      // Update metrics every 5 seconds
-        setInterval(simulateActivity, 3000);   // New activity every 3 seconds
-        setInterval(checkHealth, 30000);       // Health check every 30 seconds
+        setInterval(fetchMetrics, 5000);           // Update metrics every 5 seconds
+        setInterval(simulateActivity, 3000);       // New activity every 3 seconds
+        setInterval(checkHealth, 30000);           // Health check every 30 seconds
+        setInterval(fetchProspectorData, 60000);   // Prospector data every minute
 
         // Tab switching
         document.querySelectorAll('[data-range]').forEach(btn => {
@@ -976,10 +1009,10 @@
             { topic: "Digital Transformation: How AI is Changing Financial Advisory Services", category: "industry-news" }
         ];
 
-        // Fetch scheduled tasks
+        // Fetch scheduled tasks from CRM
         async function fetchScheduledTasks() {
             try {
-                const response = await fetch('/api/v1/content/scheduled-tasks');
+                const response = await fetch(`${CRM_API}/api/v1/content/scheduled-tasks`);
                 const data = await response.json();
 
                 document.getElementById('tasks-queued').textContent = data.queued_tasks || 0;
@@ -1051,7 +1084,7 @@
             lucide.createIcons();
 
             try {
-                const response = await fetch('/api/v1/content/batch-generate', {
+                const response = await fetch(`${CRM_API}/api/v1/content/batch-generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
