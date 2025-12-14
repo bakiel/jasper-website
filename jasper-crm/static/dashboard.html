@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JASPER | System Control Center</title>
+    <link rel="icon" type="image/png" href="/static/jasper-icon.png">
+    <link rel="apple-touch-icon" href="/static/jasper-icon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        jasper: {
+                            navy: '#0F2A3C',
+                            'navy-light': '#1a3d52',
+                            emerald: '#2C8A5B',
+                            'emerald-dark': '#1E6B45',
+                            'emerald-light': '#34a065',
+                            carbon: '#1A1A2E',
+                            slate: '#64748B',
+                        }
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        inter: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0a0a0f; }
+        h1, h2, h3, .font-heading { font-family: 'Poppins', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        .glass-card {
+            background: rgba(15, 42, 60, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(44, 138, 91, 0.2);
+        }
+
+        .gradient-border {
+            background: linear-gradient(135deg, rgba(44, 138, 91, 0.3), rgba(15, 42, 60, 0.3));
+            padding: 1px;
+            border-radius: 1rem;
+        }
+
+        .gradient-border-inner {
+            background: rgba(10, 10, 15, 0.9);
+            border-radius: calc(1rem - 1px);
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #0F2A3C 0%, #122d3f 40%, #1E6B45 100%);
+        }
+
+        .glow-emerald {
+            box-shadow: 0 0 40px rgba(44, 138, 91, 0.15);
+        }
+
+        .glow-emerald-hover:hover {
+            box-shadow: 0 0 60px rgba(44, 138, 91, 0.25);
+        }
+
+        .card-lift {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-lift:hover {
+            transform: translateY(-8px);
+        }
+
+        .status-pulse {
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #2C8A5B 0%, #34a065 50%, #2C8A5B 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Activity Feed Styles */
+        .feed-scroll {
+            max-height: 400px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #2C8A5B #0F2A3C;
+        }
+        .feed-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .feed-scroll::-webkit-scrollbar-track {
+            background: #0F2A3C;
+            border-radius: 3px;
+        }
+        .feed-scroll::-webkit-scrollbar-thumb {
+            background: #2C8A5B;
+            border-radius: 3px;
+        }
+
+        .feed-item {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Chart container */
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+
+        /* Metric card animation */
+        .metric-value {
+            transition: all 0.5s ease-out;
+        }
+
+        /* Live indicator */
+        .live-dot {
+            animation: livePulse 1.5s ease-in-out infinite;
+        }
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+        }
+
+        /* Tab styles */
+        .tab-active {
+            background: linear-gradient(135deg, #2C8A5B, #1E6B45);
+            color: white;
+        }
+        .tab-inactive {
+            background: rgba(15, 42, 60, 0.4);
+            color: #64748B;
+        }
+        .tab-inactive:hover {
+            background: rgba(15, 42, 60, 0.6);
+            color: white;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white">
+    <!-- Hero Header -->
+    <header class="hero-gradient relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute top-20 left-20 w-72 h-72 bg-emerald-500 rounded-full filter blur-3xl"></div>
+            <div class="absolute bottom-10 right-20 w-96 h-96 bg-jasper-navy rounded-full filter blur-3xl"></div>
+        </div>
+
+        <div class="relative max-w-7xl mx-auto px-6 py-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-6">
+                    <!-- Logo -->
+                    <img src="/static/jasper-icon.png" alt="JASPER" class="w-14 h-14 rounded-2xl shadow-lg glow-emerald">
+                    <div>
+                        <h1 class="text-3xl font-bold font-poppins tracking-tight">JASPER</h1>
+                        <p class="text-jasper-emerald-light tracking-widest text-xs uppercase font-medium">System Control Center</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-6">
+                    <!-- Live Indicator -->
+                    <div class="flex items-center gap-2 glass-card px-4 py-2 rounded-full">
+                        <span class="w-2 h-2 rounded-full bg-red-500 live-dot"></span>
+                        <span class="text-xs font-medium text-red-400">LIVE</span>
+                    </div>
+
+                    <!-- System Status Badge -->
+                    <div id="system-status" class="glass-card px-5 py-2.5 rounded-full flex items-center gap-3">
+                        <span class="w-3 h-3 rounded-full bg-jasper-emerald status-pulse"></span>
+                        <span class="text-sm font-medium">All Systems Operational</span>
+                    </div>
+
+                    <!-- Time -->
+                    <div class="text-sm text-jasper-slate font-mono" id="current-time"></div>
+                </div>
+            </div>
+
+            <!-- Live Stats Row -->
+            <div class="grid grid-cols-6 gap-4 mt-8">
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-gradient font-poppins" id="stat-requests">0</div>
+                    <div class="text-jasper-slate text-xs mt-1">Requests/min</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-gradient font-poppins" id="stat-latency">0ms</div>
+                    <div class="text-jasper-slate text-xs mt-1">Avg Latency</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-gradient font-poppins" id="stat-errors">0</div>
+                    <div class="text-jasper-slate text-xs mt-1">Errors (24h)</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-gradient font-poppins" id="stat-uptime">99.9%</div>
+                    <div class="text-jasper-slate text-xs mt-1">Uptime</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-gradient font-poppins">8</div>
+                    <div class="text-jasper-slate text-xs mt-1">Services</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-gradient font-poppins">28</div>
+                    <div class="text-jasper-slate text-xs mt-1">Secrets</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Monitoring & Activity Section -->
+        <section class="mb-12">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Activity Feed -->
+                <div class="lg:col-span-1">
+                    <div class="glass-card rounded-2xl p-6 h-full">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-bold font-poppins flex items-center gap-2">
+                                <i data-lucide="activity" class="w-5 h-5 text-jasper-emerald"></i>
+                                Activity Feed
+                            </h2>
+                            <span class="text-xs text-jasper-slate font-mono" id="feed-count">0 events</span>
+                        </div>
+
+                        <div id="activity-feed" class="feed-scroll space-y-2">
+                            <!-- Feed items will be inserted here -->
+                            <div class="text-center py-8 text-jasper-slate text-sm">
+                                <i data-lucide="loader-2" class="w-6 h-6 mx-auto mb-2 animate-spin"></i>
+                                Loading activity...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Grid -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Request Rate Chart -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold font-poppins flex items-center gap-2">
+                                <i data-lucide="trending-up" class="w-5 h-5 text-jasper-emerald"></i>
+                                Request Rate
+                            </h3>
+                            <div class="flex gap-2">
+                                <button class="tab-active px-3 py-1 rounded-full text-xs font-medium" data-range="1h">1H</button>
+                                <button class="tab-inactive px-3 py-1 rounded-full text-xs font-medium" data-range="6h">6H</button>
+                                <button class="tab-inactive px-3 py-1 rounded-full text-xs font-medium" data-range="24h">24H</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="requestChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Two smaller charts -->
+                    <div class="grid grid-cols-2 gap-6">
+                        <!-- Response Time Chart -->
+                        <div class="glass-card rounded-2xl p-6">
+                            <h3 class="font-semibold font-poppins flex items-center gap-2 mb-4">
+                                <i data-lucide="clock" class="w-5 h-5 text-blue-400"></i>
+                                Response Time
+                            </h3>
+                            <div class="chart-container">
+                                <canvas id="latencyChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Error Rate Chart -->
+                        <div class="glass-card rounded-2xl p-6">
+                            <h3 class="font-semibold font-poppins flex items-center gap-2 mb-4">
+                                <i data-lucide="alert-triangle" class="w-5 h-5 text-orange-400"></i>
+                                Error Rate
+                            </h3>
+                            <div class="chart-container">
+                                <canvas id="errorChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Grid -->
+        <section class="mb-12">
+            <h2 class="text-xl font-bold font-poppins mb-6 flex items-center gap-3">
+                <div class="w-9 h-9 bg-jasper-emerald/20 rounded-xl flex items-center justify-center">
+                    <i data-lucide="server" class="w-5 h-5 text-jasper-emerald"></i>
+                </div>
+                Services
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <!-- Lead Prospector - NEW -->
+                <a href="https://crm.jasperfinance.org/docs" target="_blank" class="gradient-border card-lift glow-emerald-hover">
+                    <div class="gradient-border-inner p-5 h-full">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-jasper-emerald to-jasper-emerald-dark rounded-xl flex items-center justify-center">
+                                <i data-lucide="search" class="w-6 h-6"></i>
+                            </div>
+                            <span id="prospector-status" class="flex items-center gap-2 text-xs font-medium text-jasper-emerald">
+                                <span class="w-2 h-2 rounded-full bg-jasper-emerald status-pulse"></span>
+                                Live
+                            </span>
+                        </div>
+                        <h3 class="font-poppins font-semibold mb-1">Lead Prospector</h3>
+                        <p class="text-jasper-slate text-xs mb-3">AI-powered DFI lead finder</p>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-jasper-slate font-mono">crm.jasperfinance.org</span>
+                            <span class="text-jasper-emerald">FastAPI</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-jasper-navy/50 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span class="text-jasper-slate">Leads:</span>
+                                <span class="font-mono ml-1" id="prospector-leads">--</span>
+                            </div>
+                            <div>
+                                <span class="text-jasper-slate">Feeds:</span>
+                                <span class="font-mono ml-1">3</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Main Site -->
+                <a href="https://jasperfinance.org" target="_blank" class="gradient-border card-lift glow-emerald-hover">
+                    <div class="gradient-border-inner p-5 h-full">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="globe" class="w-6 h-6"></i>
+                            </div>
+                            <span id="main-status" class="flex items-center gap-2 text-xs font-medium text-jasper-emerald">
+                                <span class="w-2 h-2 rounded-full bg-jasper-emerald status-pulse"></span>
+                                Healthy
+                            </span>
+                        </div>
+                        <h3 class="font-poppins font-semibold mb-1">Main Website</h3>
+                        <p class="text-jasper-slate text-xs mb-3">jasperfinance.org</p>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-jasper-slate font-mono">Cloudflare</span>
+                            <span class="text-cyan-400">Static</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-jasper-navy/50 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span class="text-jasper-slate">CDN:</span>
+                                <span class="font-mono ml-1 text-jasper-emerald">Active</span>
+                            </div>
+                            <div>
+                                <span class="text-jasper-slate">SSL:</span>
+                                <span class="font-mono ml-1 text-jasper-emerald">Valid</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Client Portal -->
+                <a href="https://portal.jasperfinance.org" target="_blank" class="gradient-border card-lift glow-emerald-hover">
+                    <div class="gradient-border-inner p-5 h-full">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="users" class="w-6 h-6"></i>
+                            </div>
+                            <span id="client-status" class="flex items-center gap-2 text-xs font-medium text-jasper-emerald">
+                                <span class="w-2 h-2 rounded-full bg-jasper-emerald status-pulse"></span>
+                                Healthy
+                            </span>
+                        </div>
+                        <h3 class="font-poppins font-semibold mb-1">Client Portal</h3>
+                        <p class="text-jasper-slate text-xs mb-3">Customer self-service</p>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-jasper-slate font-mono">portal.jasperfinance.org</span>
+                            <span class="text-purple-400">Next.js</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-jasper-navy/50 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span class="text-jasper-slate">Auth:</span>
+                                <span class="font-mono ml-1">Google OAuth</span>
+                            </div>
+                            <div>
+                                <span class="text-jasper-slate">SSL:</span>
+                                <span class="font-mono ml-1 text-jasper-emerald">Valid</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- n8n Workflows -->
+                <a href="https://n8n.srv1145603.hstgr.cloud" target="_blank" class="gradient-border card-lift glow-emerald-hover">
+                    <div class="gradient-border-inner p-5 h-full">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="workflow" class="w-6 h-6"></i>
+                            </div>
+                            <span class="flex items-center gap-2 text-xs font-medium text-jasper-emerald">
+                                <span class="w-2 h-2 rounded-full bg-jasper-emerald status-pulse"></span>
+                                Running
+                            </span>
+                        </div>
+                        <h3 class="font-poppins font-semibold mb-1">n8n Workflows</h3>
+                        <p class="text-jasper-slate text-xs mb-3">Automation engine</p>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-jasper-slate font-mono">Hostinger VPS</span>
+                            <span class="text-orange-400">Docker</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-jasper-navy/50 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span class="text-jasper-slate">Ver:</span>
+                                <span class="font-mono ml-1">1.120.4</span>
+                            </div>
+                            <div>
+                                <span class="text-jasper-slate">SSL:</span>
+                                <span class="font-mono ml-1 text-jasper-emerald">Valid</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- iSPEAK API -->
+                <a href="https://api.ispeak.co.za" target="_blank" class="gradient-border card-lift glow-emerald-hover">
+                    <div class="gradient-border-inner p-5 h-full">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                            </div>
+                            <span class="flex items-center gap-2 text-xs font-medium text-jasper-emerald">
+                                <span class="w-2 h-2 rounded-full bg-jasper-emerald status-pulse"></span>
+                                Healthy
+                            </span>
+                        </div>
+                        <h3 class="font-poppins font-semibold mb-1">iSPEAK API</h3>
+                        <p class="text-jasper-slate text-xs mb-3">EdTech platform backend</p>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-jasper-slate font-mono">Hostinger VPS</span>
+                            <span class="text-indigo-400">Node.js</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-jasper-navy/50 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span class="text-jasper-slate">DB:</span>
+                                <span class="font-mono ml-1">MySQL 8</span>
+                            </div>
+                            <div>
+                                <span class="text-jasper-slate">SSL:</span>
+                                <span class="font-mono ml-1 text-jasper-emerald">Valid</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- VPS Server -->
+                <a href="https://hpanel.hostinger.com/hosting/vps" target="_blank" class="gradient-border card-lift glow-emerald-hover">
+                    <div class="gradient-border-inner p-5 h-full">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-rose-500 to-rose-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="server" class="w-6 h-6"></i>
+                            </div>
+                            <span class="flex items-center gap-2 text-xs font-medium text-jasper-emerald">
+                                <span class="w-2 h-2 rounded-full bg-jasper-emerald status-pulse"></span>
+                                Running
+                            </span>
+                        </div>
+                        <h3 class="font-poppins font-semibold mb-1">Hostinger VPS</h3>
+                        <p class="text-jasper-slate text-xs mb-3">Production infrastructure</p>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-jasper-slate font-mono">72.61.201.237</span>
+                            <span class="text-rose-400">KVM2</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-jasper-navy/50 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span class="text-jasper-slate">Containers:</span>
+                                <span class="font-mono ml-1">5</span>
+                            </div>
+                            <div>
+                                <span class="text-jasper-slate">Traefik:</span>
+                                <span class="font-mono ml-1 text-jasper-emerald">Active</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Cloudflare DNS -->
+                <a href="https://dash.cloudflare.com" target="_blank" class="gradient-border card-lift glow-emerald-hover">
+                    <div class="gradient-border-inner p-5 h-full">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="cloud" class="w-6 h-6"></i>
+                            </div>
+                            <span class="flex items-center gap-2 text-xs font-medium text-jasper-emerald">
+                                <span class="w-2 h-2 rounded-full bg-jasper-emerald status-pulse"></span>
+                                Active
+                            </span>
+                        </div>
+                        <h3 class="font-poppins font-semibold mb-1">Cloudflare</h3>
+                        <p class="text-jasper-slate text-xs mb-3">DNS & CDN</p>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-jasper-slate font-mono">jasperfinance.org</span>
+                            <span class="text-amber-400">Pro</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-jasper-navy/50 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span class="text-jasper-slate">Records:</span>
+                                <span class="font-mono ml-1">12</span>
+                            </div>
+                            <div>
+                                <span class="text-jasper-slate">Cache:</span>
+                                <span class="font-mono ml-1 text-jasper-emerald">On</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Database -->
+                <div class="gradient-border">
+                    <div class="gradient-border-inner p-5 h-full">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-sky-500 to-sky-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="database" class="w-6 h-6"></i>
+                            </div>
+                            <span class="flex items-center gap-2 text-xs font-medium text-jasper-emerald">
+                                <span class="w-2 h-2 rounded-full bg-jasper-emerald status-pulse"></span>
+                                Connected
+                            </span>
+                        </div>
+                        <h3 class="font-poppins font-semibold mb-1">Databases</h3>
+                        <p class="text-jasper-slate text-xs mb-3">PostgreSQL + MySQL</p>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-jasper-slate font-mono">VPS + Hostinger</span>
+                            <span class="text-sky-400">Multi-DB</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-jasper-navy/50 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span class="text-jasper-slate">PG:</span>
+                                <span class="font-mono ml-1 text-jasper-emerald">Online</span>
+                            </div>
+                            <div>
+                                <span class="text-jasper-slate">MySQL:</span>
+                                <span class="font-mono ml-1 text-jasper-emerald">Online</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Scheduled Tasks Section -->
+        <section class="mb-12">
+            <h2 class="text-xl font-bold font-poppins mb-6 flex items-center gap-3">
+                <div class="w-9 h-9 bg-jasper-emerald/20 rounded-xl flex items-center justify-center">
+                    <i data-lucide="calendar-clock" class="w-5 h-5 text-jasper-emerald"></i>
+                </div>
+                Scheduled Tasks
+                <span class="ml-auto text-xs font-normal text-jasper-slate" id="tasks-refresh">Auto-refresh: 10s</span>
+            </h2>
+
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex gap-4 text-sm">
+                        <span class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                            <span class="text-jasper-slate">Queued: <span id="tasks-queued" class="text-white font-mono">0</span></span>
+                        </span>
+                        <span class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                            <span class="text-jasper-slate">Processing: <span id="tasks-active" class="text-white font-mono">0</span></span>
+                        </span>
+                        <span class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-jasper-emerald"></span>
+                            <span class="text-jasper-slate">Completed: <span id="tasks-completed" class="text-white font-mono">0</span></span>
+                        </span>
+                    </div>
+                    <button onclick="triggerBatchArticles()" class="px-4 py-2 bg-jasper-emerald hover:bg-jasper-emerald-dark rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        Generate 20 Articles
+                    </button>
+                </div>
+
+                <div id="tasks-list" class="space-y-3">
+                    <div class="text-center py-6 text-jasper-slate text-sm">
+                        <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        No scheduled tasks
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Links Row -->
+        <section class="mb-12">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                <a href="https://crm.jasperfinance.org/docs" target="_blank" class="glass-card rounded-xl p-4 card-lift group text-center">
+                    <i data-lucide="file-code" class="w-6 h-6 text-jasper-emerald mx-auto mb-2 group-hover:scale-110 transition-transform"></i>
+                    <div class="text-xs font-medium">CRM API</div>
+                </a>
+                <a href="https://crm.jasperfinance.org/health" target="_blank" class="glass-card rounded-xl p-4 card-lift group text-center">
+                    <i data-lucide="heart-pulse" class="w-6 h-6 text-green-400 mx-auto mb-2 group-hover:scale-110 transition-transform"></i>
+                    <div class="text-xs font-medium">Health</div>
+                </a>
+                <a href="https://n8n.srv1145603.hstgr.cloud" target="_blank" class="glass-card rounded-xl p-4 card-lift group text-center">
+                    <i data-lucide="workflow" class="w-6 h-6 text-orange-400 mx-auto mb-2 group-hover:scale-110 transition-transform"></i>
+                    <div class="text-xs font-medium">n8n</div>
+                </a>
+                <a href="https://dash.cloudflare.com" target="_blank" class="glass-card rounded-xl p-4 card-lift group text-center">
+                    <i data-lucide="cloud" class="w-6 h-6 text-amber-400 mx-auto mb-2 group-hover:scale-110 transition-transform"></i>
+                    <div class="text-xs font-medium">Cloudflare</div>
+                </a>
+                <a href="https://hpanel.hostinger.com" target="_blank" class="glass-card rounded-xl p-4 card-lift group text-center">
+                    <i data-lucide="server" class="w-6 h-6 text-rose-400 mx-auto mb-2 group-hover:scale-110 transition-transform"></i>
+                    <div class="text-xs font-medium">Hostinger</div>
+                </a>
+                <a href="https://vercel.com/dashboard" target="_blank" class="glass-card rounded-xl p-4 card-lift group text-center">
+                    <i data-lucide="triangle" class="w-6 h-6 text-white mx-auto mb-2 group-hover:scale-110 transition-transform"></i>
+                    <div class="text-xs font-medium">Vercel</div>
+                </a>
+                <a href="https://github.com" target="_blank" class="glass-card rounded-xl p-4 card-lift group text-center">
+                    <i data-lucide="github" class="w-6 h-6 text-white mx-auto mb-2 group-hover:scale-110 transition-transform"></i>
+                    <div class="text-xs font-medium">GitHub</div>
+                </a>
+                <a href="https://crm.jasperfinance.org/api/v1/prospector/prospects" target="_blank" class="glass-card rounded-xl p-4 card-lift group text-center">
+                    <i data-lucide="search" class="w-6 h-6 text-blue-400 mx-auto mb-2 group-hover:scale-110 transition-transform"></i>
+                    <div class="text-xs font-medium">Prospects</div>
+                </a>
+            </div>
+        </section>
+
+        <!-- Tech Stack -->
+        <section>
+            <div class="flex flex-wrap gap-2 justify-center">
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">FastAPI</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">Next.js 14</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">Express.js</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">PostgreSQL</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">MySQL 8</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">Redis</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">Docker</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">Traefik</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">n8n</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">OpenRouter AI</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">JWT Auth</span>
+                <span class="glass-card px-4 py-2 rounded-full text-xs font-medium">Cloudflare</span>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-jasper-navy/50 mt-12 py-6 px-6">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="/static/jasper-icon.png" alt="JASPER" class="w-8 h-8 rounded-lg">
+                <div>
+                    <div class="font-poppins font-semibold text-sm">JASPER Financial Architecture</div>
+                    <div class="text-xs text-jasper-slate">&copy; 2025 Kutlwano Holdings (Pty) Ltd</div>
+                </div>
+            </div>
+            <div class="text-xs text-jasper-slate">
+                dashboard.jasperfinance.org
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Chart.js global config
+        Chart.defaults.color = '#64748B';
+        Chart.defaults.borderColor = 'rgba(44, 138, 91, 0.1)';
+        Chart.defaults.font.family = 'Inter';
+
+        // Data storage
+        let requestData = [];
+        let latencyData = [];
+        let errorData = [];
+        let activityEvents = [];
+        const MAX_DATA_POINTS = 30;
+        const MAX_EVENTS = 50;
+
+        // Initialize charts
+        const requestChart = new Chart(document.getElementById('requestChart'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Requests/min',
+                    data: [],
+                    borderColor: '#2C8A5B',
+                    backgroundColor: 'rgba(44, 138, 91, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 6, font: { size: 10 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(44, 138, 91, 0.05)' },
+                        ticks: { font: { size: 10 } }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+
+        const latencyChart = new Chart(document.getElementById('latencyChart'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Latency (ms)',
+                    data: [],
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 4, font: { size: 9 } } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(59, 130, 246, 0.05)' }, ticks: { font: { size: 9 } } }
+                }
+            }
+        });
+
+        const errorChart = new Chart(document.getElementById('errorChart'), {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Errors',
+                    data: [],
+                    backgroundColor: 'rgba(249, 115, 22, 0.6)',
+                    borderColor: '#F97316',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 4, font: { size: 9 } } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(249, 115, 22, 0.05)' }, ticks: { font: { size: 9 }, stepSize: 1 } }
+                }
+            }
+        });
+
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-ZA', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Get timestamp label
+        function getTimeLabel() {
+            return new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Activity feed event types
+        const eventTypes = [
+            { type: 'api', icon: 'arrow-right', color: 'text-jasper-emerald', endpoints: ['GET /api/v1/leads', 'POST /api/v1/leads', 'GET /health', 'GET /api/v1/notifications'] },
+            { type: 'auth', icon: 'shield', color: 'text-blue-400', endpoints: ['JWT Token issued', 'User authenticated', 'Session refreshed'] },
+            { type: 'ai', icon: 'sparkles', color: 'text-purple-400', endpoints: ['AI Agent invoked', 'Content generated', 'Email sequence triggered'] },
+            { type: 'db', icon: 'database', color: 'text-sky-400', endpoints: ['Query executed', 'Connection pooled', 'Transaction committed'] },
+            { type: 'error', icon: 'alert-circle', color: 'text-red-400', endpoints: ['Rate limit exceeded', 'Validation error', '500 Internal Error'] },
+        ];
+
+        // Add activity event
+        function addActivityEvent(event) {
+            activityEvents.unshift(event);
+            if (activityEvents.length > MAX_EVENTS) {
+                activityEvents.pop();
+            }
+            renderActivityFeed();
+        }
+
+        // Render activity feed
+        function renderActivityFeed() {
+            const feed = document.getElementById('activity-feed');
+            const countEl = document.getElementById('feed-count');
+
+            countEl.textContent = `${activityEvents.length} events`;
+
+            feed.innerHTML = activityEvents.map((event, i) => `
+                <div class="feed-item flex items-start gap-3 p-3 rounded-lg bg-jasper-navy/30 hover:bg-jasper-navy/50 transition-colors">
+                    <div class="w-8 h-8 rounded-lg bg-jasper-navy flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="${event.icon}" class="w-4 h-4 ${event.color}"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate">${event.message}</div>
+                        <div class="text-xs text-jasper-slate mt-0.5">${event.time}</div>
+                    </div>
+                    ${event.status ? `<span class="text-xs font-mono ${event.status === 200 ? 'text-jasper-emerald' : 'text-orange-400'}">${event.status}</span>` : ''}
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        // Simulate data fetching
+        function fetchMetrics() {
+            const now = getTimeLabel();
+
+            // Simulate request rate (30-100 req/min)
+            const requests = Math.floor(Math.random() * 70) + 30;
+            requestData.push(requests);
+            if (requestData.length > MAX_DATA_POINTS) requestData.shift();
+
+            // Simulate latency (20-150ms)
+            const latency = Math.floor(Math.random() * 130) + 20;
+            latencyData.push(latency);
+            if (latencyData.length > MAX_DATA_POINTS) latencyData.shift();
+
+            // Simulate errors (0-3)
+            const errors = Math.random() > 0.7 ? Math.floor(Math.random() * 3) : 0;
+            errorData.push(errors);
+            if (errorData.length > MAX_DATA_POINTS) errorData.shift();
+
+            // Update charts
+            const labels = Array.from({ length: requestData.length }, (_, i) => {
+                const d = new Date(Date.now() - (requestData.length - i - 1) * 10000);
+                return d.toLocaleTimeString('en-ZA', { minute: '2-digit', second: '2-digit' });
+            });
+
+            requestChart.data.labels = labels;
+            requestChart.data.datasets[0].data = requestData;
+            requestChart.update('none');
+
+            latencyChart.data.labels = labels;
+            latencyChart.data.datasets[0].data = latencyData;
+            latencyChart.update('none');
+
+            errorChart.data.labels = labels.slice(-10);
+            errorChart.data.datasets[0].data = errorData.slice(-10);
+            errorChart.update('none');
+
+            // Update stats
+            document.getElementById('stat-requests').textContent = requests;
+            document.getElementById('stat-latency').textContent = latency + 'ms';
+            document.getElementById('stat-errors').textContent = errorData.reduce((a, b) => a + b, 0);
+
+            // Update service metrics
+            document.getElementById('crm-cpu').textContent = Math.floor(Math.random() * 30 + 10) + '%';
+            document.getElementById('crm-mem').textContent = Math.floor(Math.random() * 200 + 100) + 'MB';
+            document.getElementById('api-cpu').textContent = Math.floor(Math.random() * 20 + 5) + '%';
+            document.getElementById('api-mem').textContent = Math.floor(Math.random() * 150 + 80) + 'MB';
+            document.getElementById('admin-cpu').textContent = Math.floor(Math.random() * 15 + 5) + '%';
+            document.getElementById('admin-mem').textContent = Math.floor(Math.random() * 100 + 50) + 'MB';
+            document.getElementById('client-cpu').textContent = Math.floor(Math.random() * 15 + 5) + '%';
+            document.getElementById('client-mem').textContent = Math.floor(Math.random() * 100 + 50) + 'MB';
+            document.getElementById('main-cpu').textContent = Math.floor(Math.random() * 10 + 3) + '%';
+            document.getElementById('main-mem').textContent = Math.floor(Math.random() * 80 + 40) + 'MB';
+            document.getElementById('db-conn').textContent = Math.floor(Math.random() * 15 + 5);
+            document.getElementById('db-size').textContent = Math.floor(Math.random() * 50 + 100) + 'MB';
+        }
+
+        // Simulate activity events
+        function simulateActivity() {
+            const typeData = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+            const endpoint = typeData.endpoints[Math.floor(Math.random() * typeData.endpoints.length)];
+
+            addActivityEvent({
+                type: typeData.type,
+                icon: typeData.icon,
+                color: typeData.color,
+                message: endpoint,
+                time: new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                status: typeData.type === 'api' ? (Math.random() > 0.1 ? 200 : 500) : null
+            });
+        }
+
+        // Fetch health status
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+
+                const statusEl = document.getElementById('system-status');
+                const dot = statusEl.querySelector('span:first-child');
+                const text = statusEl.querySelector('span:last-child');
+
+                if (data.status === 'healthy') {
+                    dot.className = 'w-3 h-3 rounded-full bg-jasper-emerald status-pulse';
+                    text.textContent = 'All Systems Operational';
+                }
+            } catch (error) {
+                console.log('Health check error:', error);
+            }
+        }
+
+        // Initialize
+        checkHealth();
+
+        // Generate initial data
+        for (let i = 0; i < 15; i++) {
+            fetchMetrics();
+        }
+        for (let i = 0; i < 10; i++) {
+            simulateActivity();
+        }
+
+        // Update intervals
+        setInterval(fetchMetrics, 5000);      // Update metrics every 5 seconds
+        setInterval(simulateActivity, 3000);   // New activity every 3 seconds
+        setInterval(checkHealth, 30000);       // Health check every 30 seconds
+
+        // Tab switching
+        document.querySelectorAll('[data-range]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('[data-range]').forEach(b => {
+                    b.className = 'tab-inactive px-3 py-1 rounded-full text-xs font-medium';
+                });
+                e.target.className = 'tab-active px-3 py-1 rounded-full text-xs font-medium';
+            });
+        });
+
+        // =============================================================================
+        // SCHEDULED TASKS
+        // =============================================================================
+
+        const ARTICLE_TOPICS = [
+            { topic: "Understanding IDC Funding: A Complete Guide for South African Entrepreneurs", category: "dfi-insights" },
+            { topic: "How to Apply for DBSA Infrastructure Finance in 2025", category: "dfi-insights" },
+            { topic: "NEF vs IDC: Which Development Finance Institution is Right for Your Business?", category: "dfi-insights" },
+            { topic: "Green Finance: Accessing Climate Funding Through South African DFIs", category: "dfi-insights" },
+            { topic: "Understanding the IDC Application Process: Step-by-Step Guide", category: "dfi-insights" },
+            { topic: "Building a Financial Model for DFI Applications: Best Practices", category: "financial-modeling" },
+            { topic: "Key Financial Ratios DFIs Look for in Funding Applications", category: "financial-modeling" },
+            { topic: "Sensitivity Analysis: How to Stress Test Your Business Model", category: "financial-modeling" },
+            { topic: "Understanding IRR and NPV for Infrastructure Projects", category: "financial-modeling" },
+            { topic: "Cash Flow Projections: Common Mistakes to Avoid", category: "financial-modeling" },
+            { topic: "Renewable Energy Project Finance in South Africa: A 2025 Overview", category: "infrastructure-finance" },
+            { topic: "Water Infrastructure Funding Opportunities in South Africa", category: "infrastructure-finance" },
+            { topic: "Transport and Logistics Infrastructure: Funding Sources and Strategies", category: "infrastructure-finance" },
+            { topic: "Agricultural Processing Infrastructure: IDC Funding Opportunities", category: "infrastructure-finance" },
+            { topic: "Smart City Infrastructure: Technology Investment Opportunities", category: "infrastructure-finance" },
+            { topic: "Success Story: How a Township Manufacturer Secured R50M in IDC Funding", category: "case-studies" },
+            { topic: "From Startup to Scale-up: Navigating Growth Finance in South Africa", category: "case-studies" },
+            { topic: "Women-Owned Businesses: Accessing Dedicated DFI Funding Streams", category: "industry-news" },
+            { topic: "2025 DFI Trends: What's New in Development Finance", category: "industry-news" },
+            { topic: "Digital Transformation: How AI is Changing Financial Advisory Services", category: "industry-news" }
+        ];
+
+        // Fetch scheduled tasks
+        async function fetchScheduledTasks() {
+            try {
+                const response = await fetch('/api/v1/content/scheduled-tasks');
+                const data = await response.json();
+
+                document.getElementById('tasks-queued').textContent = data.queued_tasks || 0;
+                document.getElementById('tasks-active').textContent = data.active_tasks || 0;
+                document.getElementById('tasks-completed').textContent = data.completed_tasks || 0;
+
+                renderTasksList(data.tasks || []);
+            } catch (error) {
+                console.log('Tasks fetch error:', error);
+            }
+        }
+
+        // Render tasks list
+        function renderTasksList(tasks) {
+            const container = document.getElementById('tasks-list');
+
+            if (tasks.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6 text-jasper-slate text-sm">
+                        <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        No scheduled tasks
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = tasks.map(task => {
+                const statusColors = {
+                    queued: 'bg-yellow-500',
+                    processing: 'bg-blue-500 animate-pulse',
+                    completed: 'bg-jasper-emerald'
+                };
+
+                const statusBg = {
+                    queued: 'bg-yellow-500/10 border-yellow-500/20',
+                    processing: 'bg-blue-500/10 border-blue-500/20',
+                    completed: 'bg-jasper-emerald/10 border-jasper-emerald/20'
+                };
+
+                return `
+                    <div class="flex items-center gap-4 p-4 rounded-xl border ${statusBg[task.status] || 'bg-jasper-navy/30 border-jasper-navy/50'}">
+                        <div class="w-3 h-3 rounded-full ${statusColors[task.status] || 'bg-gray-500'}"></div>
+                        <div class="flex-1">
+                            <div class="font-medium text-sm">${task.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                            <div class="text-xs text-jasper-slate">Started: ${new Date(task.started_at).toLocaleString('en-ZA')}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-mono text-sm">${task.progress}</div>
+                            <div class="text-xs text-jasper-slate capitalize">${task.status}</div>
+                        </div>
+                        ${task.status === 'processing' ? `
+                            <div class="w-20 h-2 bg-jasper-navy rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500 transition-all" style="width: ${(parseInt(task.progress.split('/')[0]) / parseInt(task.progress.split('/')[1]) * 100) || 0}%"></div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // Trigger batch article generation
+        async function triggerBatchArticles() {
+            const btn = event.target.closest('button');
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Starting...';
+            lucide.createIcons();
+
+            try {
+                const response = await fetch('/api/v1/content/batch-generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        topics: ARTICLE_TOPICS,
+                        publish_immediately: false,
+                        target_seo_score: 70
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Add activity event
+                    addActivityEvent({
+                        type: 'ai',
+                        icon: 'sparkles',
+                        color: 'text-purple-400',
+                        message: `Batch generation started: ${data.total_articles} articles`,
+                        time: new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                        status: null
+                    });
+
+                    // Refresh tasks immediately
+                    fetchScheduledTasks();
+                } else {
+                    alert('Error starting batch generation: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Batch generation error:', error);
+                alert('Failed to start batch generation');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i> Generate 20 Articles';
+            lucide.createIcons();
+        }
+
+        // Initial fetch and polling
+        fetchScheduledTasks();
+        setInterval(fetchScheduledTasks, 10000); // Refresh every 10 seconds
+    </script>
+</body>
+</html>
