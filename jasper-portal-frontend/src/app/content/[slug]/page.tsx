@@ -801,7 +801,7 @@ export default function ArticleEditorPage() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="absolute bottom-0 left-0 right-0 p-3">
                           <p className="text-white text-sm font-medium truncate">
-                            {img.original_filename || img.filename}
+                            {(img as { original_filename?: string }).original_filename || img.filename}
                           </p>
                           {img.ai_evaluation?.style_tags && (
                             <p className="text-white/70 text-xs truncate mt-0.5">
