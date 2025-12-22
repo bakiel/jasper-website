@@ -25,10 +25,15 @@ let globalIsLoggingIn = false
 
 // DEV MODE: Auto-authenticate for local development
 const DEV_USER: AdminUser = {
-  id: 'dev-user',
+  id: 0,
   email: 'dev@jasperfinance.org',
-  name: 'Dev User',
+  first_name: 'Dev',
+  last_name: 'User',
   role: 'admin',
+  is_active: true,
+  email_verified: true,
+  last_login: null,
+  created_at: new Date().toISOString(),
 }
 const IS_DEV_MODE = process.env.NODE_ENV === 'development'
 
