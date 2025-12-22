@@ -127,7 +127,7 @@ export default function ArticleEditorPage() {
       filtered = filtered.filter(
         (img) =>
           img.filename.toLowerCase().includes(search) ||
-          img.original_filename.toLowerCase().includes(search) ||
+          (img as { original_filename?: string }).original_filename?.toLowerCase().includes(search) ||
           img.ai_evaluation?.description?.toLowerCase().includes(search) ||
           img.ai_evaluation?.style_tags?.some((tag) => tag.toLowerCase().includes(search))
       );
