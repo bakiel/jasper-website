@@ -3,6 +3,12 @@ import { canMakeRequest, recordRequest, handle429Response, RateLimitError, clear
 
 const API_BASE = '/api/v1'
 
+// Module-level cache for OAuth configs - prevents infinite loops from React re-renders
+let cachedGoogleClientId: string | null = null
+let cachedLinkedInConfig: { client_id: string; redirect_uri: string; scope: string } | null = null
+let googleFetchPromise: Promise<string> | null = null
+let linkedinFetchPromise: Promise<{ client_id: string; redirect_uri: string; scope: string }> | null = null
+
 // Get auth token from localStorage
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null
@@ -371,12 +377,29 @@ export const adminAuthApi = {
   },
 
   getGoogleClientId: async (): Promise<string> => {
-    const response = await fetch(`${API_BASE}/admin/auth/google/client-id`)
-    if (!response.ok) {
-      throw new Error('Google OAuth not configured')
+    // Return cached value if available
+    if (cachedGoogleClientId) {
+      return cachedGoogleClientId
     }
-    const data = await response.json()
-    return data.client_id
+
+    // Return existing promise if fetch is in progress (prevents duplicate requests)
+    if (googleFetchPromise) {
+      return googleFetchPromise
+    }
+
+    // Start new fetch and cache the promise
+    googleFetchPromise = (async () => {
+      const response = await fetch(`${API_BASE}/admin/auth/google-client-id`)
+      if (!response.ok) {
+        googleFetchPromise = null  // Clear on error to allow retry
+        throw new Error('Google OAuth not configured')
+      }
+      const data = await response.json()
+      cachedGoogleClientId = data.client_id
+      return data.client_id
+    })()
+
+    return googleFetchPromise
   },
 
   linkedinLogin: async (code: string, redirectUri: string): Promise<LoginResponse> => {
@@ -403,12 +426,29 @@ export const adminAuthApi = {
   },
 
   getLinkedInConfig: async (): Promise<{ client_id: string; redirect_uri: string; scope: string }> => {
-    // LinkedIn config - vercel.json rewrites /admin/auth/linkedin/client-id to /api/admin/auth/client-id?provider=linkedin
-    const response = await fetch(`${API_BASE}/admin/auth/linkedin/client-id`)
-    if (!response.ok) {
-      throw new Error('LinkedIn OAuth not configured')
+    // Return cached value if available
+    if (cachedLinkedInConfig) {
+      return cachedLinkedInConfig
     }
-    return response.json()
+
+    // Return existing promise if fetch is in progress (prevents duplicate requests)
+    if (linkedinFetchPromise) {
+      return linkedinFetchPromise
+    }
+
+    // Start new fetch and cache the promise
+    linkedinFetchPromise = (async () => {
+      const response = await fetch(`${API_BASE}/admin/auth/linkedin-client-id`)
+      if (!response.ok) {
+        linkedinFetchPromise = null  // Clear on error to allow retry
+        throw new Error('LinkedIn OAuth not configured')
+      }
+      const data = await response.json()
+      cachedLinkedInConfig = data
+      return data
+    })()
+
+    return linkedinFetchPromise
   },
 
   logout: () => {

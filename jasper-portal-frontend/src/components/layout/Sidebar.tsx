@@ -19,12 +19,20 @@ import {
   User,
   Menu,
   X,
+  Target,
+  Gauge,
+  PenSquare,
+  ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth-context'
 
 const navItems = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Command Center', href: '/command-center', icon: Gauge },
+  { name: 'Content', href: '/content', icon: PenSquare },
+  { name: 'Images', href: '/images', icon: ImageIcon },
+  { name: 'Leads', href: '/leads', icon: Target },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Clients', href: '/clients', icon: Users },
   { name: 'Portal Users', href: '/portal-users', icon: UserCheck },

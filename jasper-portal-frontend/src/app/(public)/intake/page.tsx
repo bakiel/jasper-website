@@ -59,10 +59,10 @@ const OPERATING_PERIODS = [
 ]
 
 const PACKAGES = [
-  { value: 'foundation', label: 'Foundation (R45,000)', description: '10-year model, basic sensitivity, 2 revisions' },
-  { value: 'professional', label: 'Professional (R150,000)', description: '15-year model, Monte Carlo, DFI documentation, 5 revisions' },
-  { value: 'enterprise', label: 'Enterprise (R450,000)', description: '20+ year model, advanced analytics, unlimited revisions' },
-  { value: 'custom', label: 'Custom', description: 'Complex multi-project or bespoke requirements' },
+  { value: 'growth', label: 'Growth ($12,000)', description: '10-year model, basic sensitivity, 2 revisions' },
+  { value: 'institutional', label: 'Institutional ($25,000)', description: '15-year model, Monte Carlo, DFI documentation, 3 revisions' },
+  { value: 'infrastructure', label: 'Infrastructure ($45,000)', description: '20-year model, full analytics suite, 5 revisions' },
+  { value: 'strategic', label: 'Strategic ($85,000+)', description: 'Complex multi-project, bespoke requirements, unlimited support' },
   { value: 'unsure', label: 'Not sure - please advise based on my requirements', description: '' },
 ]
 
@@ -1003,7 +1003,7 @@ ADDITIONAL INFO: ${formData.additionalInfo || 'None'}
 
         {/* Footer */}
         <div className="text-center mt-8 text-xs text-jasper-slate-light">
-          <p>JASPER Financial Architecture is a division of Kutlwano Holdings (Pty) Ltd.</p>
+          <p>JASPER Financial Architecture is a division of Gahn Eden (Pty) Ltd.</p>
           <p className="mt-1">All information provided is treated as confidential.</p>
           <p className="mt-3">
             <a href="mailto:models@jasperfinance.org" className="text-jasper-emerald hover:underline">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Script from 'next/script'
 import { useSearchParams } from 'next/navigation'
@@ -54,16 +54,28 @@ export default function LoginPage() {
   const [linkedinConfig, setLinkedinConfig] = useState<{ client_id: string; redirect_uri: string; scope: string } | null>(null)
   const [linkedinLoading, setLinkedinLoading] = useState(false)
   const [linkedinCodeProcessed, setLinkedinCodeProcessed] = useState(false)
+  const [darkMode, setDarkMode] = useState(true) // Default to dark mode
 
-  // Fetch Google Client ID
+  // CRITICAL: Use refs to prevent infinite loop - only fetch once
+  const hasFetchedGoogleRef = useRef(false)
+  const hasFetchedLinkedinRef = useRef(false)
+  const hasInitializedGoogleRef = useRef(false)
+
+  // Fetch Google Client ID - only once
   useEffect(() => {
+    if (hasFetchedGoogleRef.current) return
+    hasFetchedGoogleRef.current = true
+
     adminAuthApi.getGoogleClientId()
       .then(setGoogleClientId)
       .catch(() => console.log('Google OAuth not configured'))
   }, [])
 
-  // Fetch LinkedIn config
+  // Fetch LinkedIn config - only once
   useEffect(() => {
+    if (hasFetchedLinkedinRef.current) return
+    hasFetchedLinkedinRef.current = true
+
     adminAuthApi.getLinkedInConfig()
       .then(setLinkedinConfig)
       .catch(() => console.log('LinkedIn OAuth not configured'))
@@ -71,44 +83,50 @@ export default function LoginPage() {
 
   // Handle LinkedIn OAuth callback - must use code immediately before it expires
   useEffect(() => {
-    // Prevent double-execution (React Strict Mode or re-renders)
-    if (linkedinCodeProcessed) return
-
+    // Prevent double-execution using sessionStorage (survives React Strict Mode remount)
     const code = searchParams.get('code')
     const state = searchParams.get('state')
     const linkedinError = searchParams.get('error')
 
     if (linkedinError) {
       setError(`LinkedIn login failed: ${searchParams.get('error_description') || linkedinError}`)
-      // Clear URL params
       window.history.replaceState({}, '', '/login')
       return
     }
 
     // Use code immediately - LinkedIn auth codes expire in ~20 seconds
-    // The redirect_uri must exactly match what was used in the authorization request
     if (code && state === 'linkedin_login') {
-      // Mark as processed immediately to prevent duplicate calls
+      // Check sessionStorage to prevent duplicate calls (React Strict Mode protection)
+      const processedCode = sessionStorage.getItem('linkedin_code_processed')
+      if (processedCode === code) {
+        return // Already processing this code
+      }
+
+      // Mark as processed in sessionStorage immediately
+      sessionStorage.setItem('linkedin_code_processed', code)
       setLinkedinCodeProcessed(true)
       setLinkedinLoading(true)
       setError('')
 
-      // Clear URL params FIRST to prevent re-processing on re-render
+      // Clear URL params
       window.history.replaceState({}, '', '/login')
 
-      // Use the exact URL that LinkedIn redirected to (without query params)
+      // Use the exact URL that LinkedIn redirected to
       const redirectUri = `${window.location.origin}/login`
       linkedinLogin(code, redirectUri)
+        .then(() => {
+          sessionStorage.removeItem('linkedin_code_processed')
+        })
         .catch((err) => {
+          sessionStorage.removeItem('linkedin_code_processed')
           setError(err instanceof Error ? err.message : 'LinkedIn login failed')
-          // Reset so user can try again
           setLinkedinCodeProcessed(false)
         })
         .finally(() => {
           setLinkedinLoading(false)
         })
     }
-  }, [searchParams, linkedinLogin, linkedinCodeProcessed])
+  }, [searchParams, linkedinLogin])
 
   // LinkedIn login handler
   const handleLinkedInLogin = () => {
@@ -141,23 +159,26 @@ export default function LoginPage() {
     }
   }, [googleLogin])
 
-  // Initialize Google Sign-In when script loads and client ID is available
+  // Initialize Google Sign-In when script loads and client ID is available - only once
   useEffect(() => {
-    if (googleScriptLoaded && googleClientId && window.google) {
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleCallback,
-      })
+    if (hasInitializedGoogleRef.current) return
+    if (!googleScriptLoaded || !googleClientId || !window.google) return
 
-      const buttonDiv = document.getElementById('google-signin-button')
-      if (buttonDiv) {
-        window.google.accounts.id.renderButton(buttonDiv, {
-          theme: 'outline',
-          size: 'large',
-          text: 'signin_with',
-          width: 320,
-        })
-      }
+    hasInitializedGoogleRef.current = true
+
+    window.google.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: handleGoogleCallback,
+    })
+
+    const buttonDiv = document.getElementById('google-signin-button')
+    if (buttonDiv) {
+      window.google.accounts.id.renderButton(buttonDiv, {
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
+        width: 320,
+      })
     }
   }, [googleScriptLoaded, googleClientId, handleGoogleCallback])
 
@@ -269,12 +290,39 @@ export default function LoginPage() {
       </div>
 
       {/* Right side - Login form */}
-      <div className="w-full lg:w-1/2 lg:flex-shrink-0 flex items-center justify-center p-8 bg-white">
+      <div className={cn(
+        "w-full lg:w-1/2 lg:flex-shrink-0 flex items-center justify-center p-8 transition-colors duration-300",
+        darkMode ? "bg-jasper-navy" : "bg-white"
+      )}>
         <div className="w-full max-w-md">
+          {/* Dark mode toggle */}
+          <div className="absolute top-4 right-4">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={cn(
+                "p-2 rounded-lg transition-colors",
+                darkMode
+                  ? "bg-white/10 hover:bg-white/20 text-white"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-600"
+              )}
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {darkMode ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
           {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-8">
             <Image
-              src="/images/jasper-icon.png"
+              src={darkMode ? "/images/jasper-logo-white.png" : "/images/jasper-icon.png"}
               alt="JASPER"
               width={64}
               height={64}
@@ -284,10 +332,13 @@ export default function LoginPage() {
 
           {/* Form header */}
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-jasper-navy mb-2">
+            <h2 className={cn(
+              "text-3xl font-bold mb-2",
+              darkMode ? "text-white" : "text-jasper-navy"
+            )}>
               Welcome back
             </h2>
-            <p className="text-jasper-graphite">
+            <p className={darkMode ? "text-gray-300" : "text-jasper-graphite"}>
               Sign in to your admin account
             </p>
           </div>
@@ -330,10 +381,10 @@ export default function LoginPage() {
 
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
+                  <div className={cn("w-full border-t", darkMode ? "border-white/20" : "border-border")}></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-jasper-slate">or continue with email</span>
+                  <span className={cn("px-2", darkMode ? "bg-jasper-navy text-gray-400" : "bg-white text-jasper-slate")}>or continue with email</span>
                 </div>
               </div>
             </>
@@ -351,12 +402,15 @@ export default function LoginPage() {
 
             {/* Email field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-jasper-carbon mb-2">
+              <label htmlFor="email" className={cn(
+                "block text-sm font-medium mb-2",
+                darkMode ? "text-gray-200" : "text-jasper-carbon"
+              )}>
                 Email address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-jasper-slate" />
+                  <Mail className={cn("h-5 w-5", darkMode ? "text-gray-400" : "text-jasper-slate")} />
                 </div>
                 <input
                   id="email"
@@ -367,10 +421,12 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={cn(
-                    'block w-full pl-10 pr-4 py-3 border border-border rounded-lg',
-                    'bg-white text-jasper-carbon placeholder-jasper-slate/60',
+                    'block w-full pl-10 pr-4 py-3 border rounded-lg',
                     'focus:outline-none focus:ring-2 focus:ring-jasper-emerald focus:border-transparent',
-                    'transition-colors duration-200'
+                    'transition-colors duration-200',
+                    darkMode
+                      ? 'bg-white/10 border-white/20 text-white placeholder-gray-400'
+                      : 'bg-white border-border text-jasper-carbon placeholder-jasper-slate/60'
                   )}
                   placeholder="admin@jasperfinance.org"
                 />
@@ -379,12 +435,15 @@ export default function LoginPage() {
 
             {/* Password field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-jasper-carbon mb-2">
+              <label htmlFor="password" className={cn(
+                "block text-sm font-medium mb-2",
+                darkMode ? "text-gray-200" : "text-jasper-carbon"
+              )}>
                 Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-jasper-slate" />
+                  <Lock className={cn("h-5 w-5", darkMode ? "text-gray-400" : "text-jasper-slate")} />
                 </div>
                 <input
                   id="password"
@@ -395,10 +454,12 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={cn(
-                    'block w-full pl-10 pr-12 py-3 border border-border rounded-lg',
-                    'bg-white text-jasper-carbon placeholder-jasper-slate/60',
+                    'block w-full pl-10 pr-12 py-3 border rounded-lg',
                     'focus:outline-none focus:ring-2 focus:ring-jasper-emerald focus:border-transparent',
-                    'transition-colors duration-200'
+                    'transition-colors duration-200',
+                    darkMode
+                      ? 'bg-white/10 border-white/20 text-white placeholder-gray-400'
+                      : 'bg-white border-border text-jasper-carbon placeholder-jasper-slate/60'
                   )}
                   placeholder="Enter your password"
                 />
@@ -408,9 +469,9 @@ export default function LoginPage() {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-jasper-slate hover:text-jasper-carbon transition-colors" />
+                    <EyeOff className={cn("h-5 w-5 transition-colors", darkMode ? "text-gray-400 hover:text-white" : "text-jasper-slate hover:text-jasper-carbon")} />
                   ) : (
-                    <Eye className="h-5 w-5 text-jasper-slate hover:text-jasper-carbon transition-colors" />
+                    <Eye className={cn("h-5 w-5 transition-colors", darkMode ? "text-gray-400 hover:text-white" : "text-jasper-slate hover:text-jasper-carbon")} />
                   )}
                 </button>
               </div>
@@ -442,7 +503,7 @@ export default function LoginPage() {
 
           {/* Footer */}
           <div className="mt-8 text-center">
-            <p className="text-sm text-jasper-slate">
+            <p className={cn("text-sm", darkMode ? "text-gray-400" : "text-jasper-slate")}>
               Need help? Contact{' '}
               <a href="mailto:support@jasperfinance.org" className="text-jasper-emerald hover:text-jasper-emerald-dark">
                 support@jasperfinance.org

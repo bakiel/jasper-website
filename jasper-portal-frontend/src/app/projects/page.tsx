@@ -53,10 +53,10 @@ const stageFilters = [
 ]
 
 const packageOptions = [
-  { value: 'startup', label: 'Start-Up Package', price: 'R45,000 - R75,000' },
-  { value: 'growth', label: 'Growth Package', price: 'R150,000 - R350,000' },
-  { value: 'enterprise', label: 'Enterprise Package', price: 'R500,000 - R750,000' },
-  { value: 'custom', label: 'Custom Package', price: 'Custom pricing' },
+  { value: 'growth', label: 'Growth', price: '$12,000' },
+  { value: 'institutional', label: 'Institutional', price: '$25,000' },
+  { value: 'infrastructure', label: 'Infrastructure', price: '$45,000' },
+  { value: 'strategic', label: 'Strategic', price: '$85,000+' },
 ]
 
 const sectorOptions = [

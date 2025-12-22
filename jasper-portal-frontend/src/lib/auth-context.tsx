@@ -23,8 +23,21 @@ const publicRoutes = ['/login', '/intake']
 let globalAuthChecked = false
 let globalIsLoggingIn = false
 
+// DEV MODE: Auto-authenticate for local development
+const DEV_USER: AdminUser = {
+  id: 'dev-user',
+  email: 'dev@jasperfinance.org',
+  name: 'Dev User',
+  role: 'admin',
+}
+const IS_DEV_MODE = process.env.NODE_ENV === 'development'
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(() => {
+    // DEV MODE: Auto-authenticate
+    if (IS_DEV_MODE) {
+      return DEV_USER
+    }
     // Initialize from localStorage immediately to prevent flash
     if (typeof window !== 'undefined') {
       return adminAuthApi.getCurrentUser()
@@ -32,6 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null
   })
   const [isLoading, setIsLoading] = useState(() => {
+    // DEV MODE: Never show loading
+    if (IS_DEV_MODE) {
+      return false
+    }
     // If we already have a user from localStorage, don't show loading
     if (typeof window !== 'undefined' && adminAuthApi.getCurrentUser()) {
       return false
@@ -44,6 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check authentication status on mount only
   useEffect(() => {
+    // DEV MODE: Skip auth check entirely
+    if (IS_DEV_MODE) {
+      return
+    }
+
     const checkAuth = async () => {
       // Skip if already checked globally or currently logging in
       if (globalAuthChecked || globalIsLoggingIn) {
@@ -82,6 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Handle route protection - only redirect, don't cause loops
   useEffect(() => {
+    // DEV MODE: Skip route protection
+    if (IS_DEV_MODE) return
+
     // Don't do anything while loading or logging in
     if (isLoading || globalIsLoggingIn) return
 
