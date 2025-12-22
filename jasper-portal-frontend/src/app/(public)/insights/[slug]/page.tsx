@@ -5,8 +5,8 @@ import { useParams, notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 
-// API URL
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.jasperfinance.org'
+// API URL - use relative path to go through Vercel rewrites (avoids mixed content)
+const API_BASE = ''
 
 // Blog post interface
 interface BlogPost {

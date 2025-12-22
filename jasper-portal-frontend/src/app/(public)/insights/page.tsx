@@ -23,8 +23,8 @@ interface BlogPost {
   status: string
 }
 
-// API URL
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.jasperfinance.org'
+// API URL - use relative path to go through Vercel rewrites (avoids mixed content)
+const API_BASE = ''
 
 // Category icon components
 const categoryIcons: Record<string, React.ReactNode> = {

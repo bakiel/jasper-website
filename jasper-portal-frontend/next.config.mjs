@@ -3,10 +3,11 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // For VPS deployment with PM2
   async rewrites() {
-    // VPS API URL - all routes go to jasper-api on port 3003
-    const apiUrl = process.env.NODE_ENV === 'production'
-      ? 'http://127.0.0.1:3003'  // VPS: jasper-api running locally
-      : 'http://127.0.0.1:8000'  // Dev: FastAPI backend
+    // Use NEXT_PUBLIC_API_URL from environment or fallback to VPS API
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ||
+      (process.env.NODE_ENV === 'production'
+        ? 'http://72.61.201.237:9003'  // VPS: jasper-api
+        : 'http://127.0.0.1:8000')     // Dev: FastAPI backend
 
     return [
       // All API routes proxy to jasper-api
