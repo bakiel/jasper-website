@@ -1,0 +1,298 @@
+"""
+JASPER CRM - Admin Authentication Routes
+
+Provides email/password and OAuth authentication for admin portal users.
+"""
+
+import os
+import logging
+import hashlib
+import httpx
+from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Header
+from pydantic import BaseModel, Field, EmailStr
+
+from services.auth_service import auth_service, UserRole
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/v1/admin/auth", tags=["Admin Authentication"])
+
+
+# ============================================
+# Request/Response Models
+# ============================================
+
+class AdminLoginRequest(BaseModel):
+    """Admin login request with email/password."""
+    email: EmailStr
+    password: str
+
+
+class AdminUser(BaseModel):
+    """Admin user information."""
+    id: str
+    email: str
+    first_name: str
+    last_name: str
+    role: str
+    avatar_url: Optional[str] = None
+
+
+class AdminLoginResponse(BaseModel):
+    """Admin login response with token and user info."""
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user: AdminUser
+
+
+# ============================================
+# Admin Users (in production, store in database)
+# ============================================
+
+def hash_password(password: str) -> str:
+    """Hash password using SHA256."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+# Admin users - in production these would be in the database
+ADMIN_USERS = {
+    "admin@jasperfinance.org": {
+        "id": "admin-001",
+        "email": "admin@jasperfinance.org",
+        "password_hash": hash_password("I0y2Q7418LnCPTvjJZH7cb6j"),
+        "first_name": "Bakiel",
+        "last_name": "Nxumalo",
+        "role": "super_admin",
+    },
+    "demo@jasperfinance.org": {
+        "id": "admin-002",
+        "email": "demo@jasperfinance.org",
+        "password_hash": hash_password("demo123"),
+        "first_name": "Demo",
+        "last_name": "User",
+        "role": "admin",
+    },
+}
+
+
+# ============================================
+# Routes
+# ============================================
+
+@router.post("/login", response_model=AdminLoginResponse)
+async def admin_login(request: AdminLoginRequest):
+    """
+    Admin portal login with email and password.
+
+    Returns JWT token and user information.
+    """
+    # Find user by email
+    user_data = ADMIN_USERS.get(request.email.lower())
+
+    if not user_data:
+        logger.warning(f"Login attempt for unknown email: {request.email}")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Verify password
+    password_hash = hash_password(request.password)
+    if password_hash != user_data["password_hash"]:
+        logger.warning(f"Invalid password for: {request.email}")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Generate token
+    access_token = auth_service.create_access_token(
+        subject=user_data["email"],
+        role=UserRole.ADMIN
+    )
+
+    logger.info(f"Admin login successful: {request.email}")
+
+    return AdminLoginResponse(
+        access_token=access_token,
+        expires_in=auth_service.config.access_token_expire_minutes * 60,
+        user=AdminUser(
+            id=user_data["id"],
+            email=user_data["email"],
+            first_name=user_data["first_name"],
+            last_name=user_data["last_name"],
+            role=user_data["role"],
+        )
+    )
+
+
+@router.get("/google-client-id")
+async def get_google_client_id():
+    """Get Google OAuth client ID for frontend."""
+    client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+    return {"client_id": client_id}
+
+
+@router.get("/linkedin-client-id")
+async def get_linkedin_client_id():
+    """Get LinkedIn OAuth client ID for frontend."""
+    client_id = os.getenv("LINKEDIN_CLIENT_ID", "")
+    return {"client_id": client_id}
+
+
+class GoogleCredential(BaseModel):
+    """Google OAuth credential from frontend."""
+    credential: str
+
+
+@router.post("/google", response_model=AdminLoginResponse)
+async def google_login(request: GoogleCredential):
+    """
+    Google OAuth login for admin portal.
+
+    Verifies Google ID token and creates a session.
+    """
+    try:
+        # Verify the Google ID token using Google's tokeninfo endpoint
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={request.credential}"
+            )
+
+        if response.status_code != 200:
+            logger.warning("Google token verification failed")
+            raise HTTPException(status_code=401, detail="Invalid Google token")
+
+        token_info = response.json()
+
+        # Verify the token is for our app
+        expected_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+        if token_info.get("aud") != expected_client_id:
+            logger.warning(f"Token audience mismatch: {token_info.get('aud')}")
+            raise HTTPException(status_code=401, detail="Invalid token audience")
+
+        # Extract user info from token
+        email = token_info.get("email", "").lower()
+        email_verified = token_info.get("email_verified") == "true"
+
+        if not email or not email_verified:
+            raise HTTPException(status_code=401, detail="Email not verified")
+
+        # Check if user is authorized (in ADMIN_USERS or has @jasperfinance.org domain)
+        user_data = ADMIN_USERS.get(email)
+
+        if not user_data:
+            # Allow any jasperfinance.org email or create a new user entry
+            if email.endswith("@jasperfinance.org"):
+                user_data = {
+                    "id": f"google-{hashlib.md5(email.encode()).hexdigest()[:8]}",
+                    "email": email,
+                    "first_name": token_info.get("given_name", "User"),
+                    "last_name": token_info.get("family_name", ""),
+                    "role": "admin",
+                }
+            else:
+                # For external users, create a limited user account
+                user_data = {
+                    "id": f"google-{hashlib.md5(email.encode()).hexdigest()[:8]}",
+                    "email": email,
+                    "first_name": token_info.get("given_name", "User"),
+                    "last_name": token_info.get("family_name", ""),
+                    "role": "user",
+                }
+
+        # Generate access token
+        access_token = auth_service.create_access_token(
+            subject=email,
+            role=UserRole.ADMIN if user_data["role"] in ["admin", "super_admin"] else UserRole.READONLY
+        )
+
+        logger.info(f"Google OAuth login successful: {email}")
+
+        return AdminLoginResponse(
+            access_token=access_token,
+            expires_in=auth_service.config.access_token_expire_minutes * 60,
+            user=AdminUser(
+                id=user_data["id"],
+                email=user_data["email"],
+                first_name=user_data["first_name"],
+                last_name=user_data["last_name"],
+                role=user_data["role"],
+                avatar_url=token_info.get("picture"),
+            )
+        )
+
+    except httpx.RequestError as e:
+        logger.error(f"Google token verification request failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify Google token")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Google login error: {e}")
+        raise HTTPException(status_code=500, detail="Authentication failed")
+
+
+@router.get("/me")
+async def get_current_user_info(authorization: str = Header(None)):
+    """
+    Get current authenticated user info from JWT token.
+
+    Returns user information from the JWT token.
+    """
+    # Get authorization header
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Extract token from "Bearer <token>"
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+
+    token = authorization[7:]  # Remove "Bearer " prefix
+
+    # Verify token
+    payload = auth_service.verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    email = payload.get("sub", "")
+    role = payload.get("role", "user")
+
+    # Try to get user from ADMIN_USERS or construct from token
+    user_data = ADMIN_USERS.get(email)
+
+    if user_data:
+        return {
+            "id": user_data["id"],
+            "email": user_data["email"],
+            "first_name": user_data["first_name"],
+            "last_name": user_data["last_name"],
+            "role": user_data["role"],
+            "is_active": True,
+            "email_verified": True,
+            "last_login": None,
+            "created_at": "2024-01-01T00:00:00Z"
+        }
+    else:
+        # For Google OAuth users not in ADMIN_USERS
+        return {
+            "id": f"google-{hashlib.md5(email.encode()).hexdigest()[:8]}",
+            "email": email,
+            "first_name": email.split("@")[0],
+            "last_name": "",
+            "role": role,
+            "is_active": True,
+            "email_verified": True,
+            "last_login": None,
+            "created_at": "2024-01-01T00:00:00Z"
+        }
+
+
+@router.post("/linkedin")
+async def linkedin_login(code: dict):
+    """
+    LinkedIn OAuth login for admin portal.
+
+    TODO: Implement proper LinkedIn OAuth verification.
+    """
+    raise HTTPException(
+        status_code=501,
+        detail="LinkedIn OAuth not configured. Use email/password login."
+    )
