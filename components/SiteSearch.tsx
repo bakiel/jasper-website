@@ -231,15 +231,16 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
 
   return (
     <>
-      {/* Search Button Trigger */}
+      {/* Search Button Trigger - minimal icon for dark header */}
       <button
         onClick={openModal}
-        className={`group flex items-center gap-3 px-4 py-2 rounded-lg border border-gray-200 hover:border-jasper-emerald transition-all duration-200 bg-white hover:shadow-sm ${className}`}
-        aria-label="Open search"
+        className={`group flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all ${className}`}
+        aria-label={`Open search (${shortcutKey})`}
+        title={`Search (${shortcutKey})`}
         type="button"
       >
         <svg
-          className="w-5 h-5 text-jasper-slate group-hover:text-jasper-emerald transition-colors"
+          className="w-4 h-4"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -252,12 +253,6 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
           />
         </svg>
-        <span className="text-sm text-jasper-slate group-hover:text-jasper-navy transition-colors">
-          Search articles...
-        </span>
-        <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-jasper-slate bg-gray-100 rounded border border-gray-200">
-          {shortcutKey}
-        </kbd>
       </button>
 
       {/* Search Modal */}
