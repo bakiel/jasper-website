@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ImageIcon, Search, Filter, Star, Trash2, RefreshCw, Grid, List, Sparkles, Download, ExternalLink, Upload, Wand2, Palette, Library, Check, X } from "lucide-react";
+import { ImageIcon, Search, Filter, Star, Trash2, RefreshCw, Grid, List, Sparkles, Download, ExternalLink, Upload, Wand2, Palette, Library, Check, X, CheckSquare, Square, Maximize2, ChevronLeft, ChevronRight, Copy, Link, Eye } from "lucide-react";
 
 interface ImageEntry {
   id: string;
@@ -65,6 +65,13 @@ interface StockImageResult {
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_CRM_API_URL || "https://api.jasperfinance.org";
+
+// Helper to get full image URL (API returns relative paths)
+const getImageUrl = (publicUrl: string) => {
+  if (!publicUrl) return "/images/placeholder.jpg";
+  if (publicUrl.startsWith("http")) return publicUrl;
+  return `${API_BASE}${publicUrl}`;
+};
 
 // DFI Sector categories aligned with marketing site
 const DFI_SECTORS = [
@@ -138,6 +145,50 @@ export default function ImageLibraryPage() {
   const [stockImporting, setStockImporting] = useState<string | null>(null);
   const [stockCategory, setStockCategory] = useState("DFI Insights");
   const [selectedStockImages, setSelectedStockImages] = useState<Set<string>>(new Set());
+
+  // Multi-select for library images
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  // Full-page preview modal
+  const [showFullPreview, setShowFullPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState<ImageEntry | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Open full preview modal
+  const openFullPreview = (img: ImageEntry) => {
+    setPreviewImage(img);
+    setShowFullPreview(true);
+    setCopied(false);
+  };
+
+  // Navigate to next/previous image in full preview
+  const navigatePreview = (direction: 'next' | 'prev') => {
+    if (!previewImage) return;
+    const currentIndex = filteredImages.findIndex(img => img.id === previewImage.id);
+    if (currentIndex === -1) return;
+
+    let newIndex: number;
+    if (direction === 'next') {
+      newIndex = currentIndex < filteredImages.length - 1 ? currentIndex + 1 : 0;
+    } else {
+      newIndex = currentIndex > 0 ? currentIndex - 1 : filteredImages.length - 1;
+    }
+    setPreviewImage(filteredImages[newIndex]);
+    setCopied(false);
+  };
+
+  // Copy URL to clipboard
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   useEffect(() => {
     fetchImages();
@@ -288,6 +339,71 @@ export default function ImageLibraryPage() {
     } catch (error) {
       console.error("Failed to delete image:", error);
     }
+  };
+
+  // Toggle image selection for bulk operations
+  const toggleImageSelection = (imageId: string) => {
+    setSelectedImages(prev => {
+      const next = new Set(prev);
+      if (next.has(imageId)) {
+        next.delete(imageId);
+      } else {
+        next.add(imageId);
+      }
+      return next;
+    });
+  };
+
+  // Select all visible images
+  const selectAllImages = () => {
+    const selectableImages = filteredImages.filter(img => img.used_in.length === 0);
+    setSelectedImages(new Set(selectableImages.map(img => img.id)));
+  };
+
+  // Deselect all
+  const deselectAllImages = () => {
+    setSelectedImages(new Set());
+  };
+
+  // Bulk delete selected images
+  const deleteSelectedImages = async () => {
+    const selectedCount = selectedImages.size;
+    if (selectedCount === 0) return;
+
+    // Check if any selected images are in use
+    const inUseImages = filteredImages.filter(img => selectedImages.has(img.id) && img.used_in.length > 0);
+    if (inUseImages.length > 0) {
+      alert(`Cannot delete ${inUseImages.length} image(s) that are in use. Please deselect them first.`);
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedCount} image(s)? This cannot be undone.`)) return;
+
+    try {
+      setBulkDeleting(true);
+      const deletePromises = Array.from(selectedImages).map(imageId =>
+        fetch(`${API_BASE}/api/v1/images/library/${imageId}`, { method: "DELETE" })
+      );
+
+      await Promise.all(deletePromises);
+
+      setSelectedImages(new Set());
+      setSelectMode(false);
+      setSelectedImage(null);
+      fetchImages();
+      fetchStats();
+    } catch (error) {
+      console.error("Failed to delete images:", error);
+      alert("Some images failed to delete. Please try again.");
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  // Exit select mode
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedImages(new Set());
   };
 
   // Toggle reference image selection
@@ -502,6 +618,35 @@ export default function ImageLibraryPage() {
     return "text-red-600";
   };
 
+  // Keyboard navigation for full preview modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!showFullPreview || !previewImage) return;
+
+      if (e.key === 'Escape') {
+        setShowFullPreview(false);
+        return;
+      }
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const currentIndex = filteredImages.findIndex(img => img.id === previewImage.id);
+        if (currentIndex === -1) return;
+
+        let newIndex: number;
+        if (e.key === 'ArrowRight') {
+          newIndex = currentIndex < filteredImages.length - 1 ? currentIndex + 1 : 0;
+        } else {
+          newIndex = currentIndex > 0 ? currentIndex - 1 : filteredImages.length - 1;
+        }
+        setPreviewImage(filteredImages[newIndex]);
+        setCopied(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showFullPreview, previewImage, filteredImages]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a0f14]">
       {/* Header */}
@@ -526,6 +671,17 @@ export default function ImageLibraryPage() {
               Refresh
             </button>
             <button
+              onClick={() => setSelectMode(!selectMode)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                selectMode
+                  ? "bg-blue-100 dark:bg-blue-900/30 border border-blue-400 text-blue-700 dark:text-blue-400"
+                  : "border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300"
+              }`}
+            >
+              <CheckSquare className="w-4 h-4" />
+              Select
+            </button>
+            <button
               onClick={() => setShowUploadDialog(true)}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300"
             >
@@ -534,17 +690,17 @@ export default function ImageLibraryPage() {
             </button>
             <button
               onClick={() => setShowStockDialog(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-blue-400 dark:border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300 whitespace-nowrap"
             >
               <Library className="w-4 h-4" />
-              Browse Stock
+              Stock
             </button>
             <button
-              className="relative flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#2C8A5B] to-[#34d399] text-white rounded-lg font-semibold shadow-lg shadow-[#2C8A5B]/30 hover:shadow-[#2C8A5B]/50 hover:scale-[1.02] transition-all duration-200 group"
+              className="flex items-center gap-2 px-4 py-2 bg-[#2C8A5B] text-white rounded-lg hover:bg-[#1E6B45] transition-colors whitespace-nowrap"
               onClick={() => setShowGenerateDialog(true)}
             >
-              <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-              Generate Image
+              <Sparkles className="w-4 h-4" />
+              Generate
             </button>
           </div>
         </div>
@@ -657,6 +813,61 @@ export default function ImageLibraryPage() {
         </div>
       </div>
 
+      {/* Bulk Actions Bar - shown when in select mode */}
+      {selectMode && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-blue-700 dark:text-blue-300">
+                <strong>{selectedImages.size}</strong> image{selectedImages.size !== 1 ? "s" : ""} selected
+              </span>
+              <button
+                onClick={selectAllImages}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Select all unused ({filteredImages.filter(img => img.used_in.length === 0).length})
+              </button>
+              {selectedImages.size > 0 && (
+                <button
+                  onClick={deselectAllImages}
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Deselect all
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {selectedImages.size > 0 && (
+                <button
+                  onClick={deleteSelectedImages}
+                  disabled={bulkDeleting}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {bulkDeleting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Delete Selected ({selectedImages.size})
+                    </>
+                  )}
+                </button>
+              )}
+              <button
+                onClick={exitSelectMode}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-white dark:hover:bg-white/5 text-gray-700 dark:text-gray-300"
+              >
+                <X className="w-4 h-4" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className="flex">
         {/* Image Grid/List */}
@@ -688,22 +899,78 @@ export default function ImageLibraryPage() {
               {filteredImages.map((img) => (
                 <div
                   key={img.id}
-                  onClick={() => setSelectedImage(img)}
+                  onClick={() => {
+                    if (selectMode) {
+                      if (img.used_in.length === 0) {
+                        toggleImageSelection(img.id);
+                      }
+                    } else {
+                      setSelectedImage(img);
+                    }
+                  }}
                   className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 ${
-                    selectedImage?.id === img.id ? "border-[#2C8A5B]" : "border-gray-200 dark:border-[#1a3d52]"
-                  } hover:border-[#2C8A5B]/60 transition-all bg-white dark:bg-[#0F2A3C] shadow-sm`}
+                    selectMode && selectedImages.has(img.id)
+                      ? "border-blue-500 ring-2 ring-blue-500/30"
+                      : selectedImage?.id === img.id
+                        ? "border-[#2C8A5B]"
+                        : "border-gray-200 dark:border-[#1a3d52]"
+                  } hover:border-[#2C8A5B]/60 transition-all bg-white dark:bg-[#0F2A3C] shadow-sm ${
+                    selectMode && img.used_in.length > 0 ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
-                  <div className="aspect-video bg-gray-100 dark:bg-[#1a3d52]">
+                  <div className="aspect-video bg-gray-100 dark:bg-[#1a3d52] relative overflow-hidden">
                     <img
-                      src={img.public_url}
+                      src={getImageUrl(img.public_url)}
                       alt={img.filename}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/images/placeholder.jpg";
+                        const imgEl = e.target as HTMLImageElement;
+                        if (!imgEl.dataset.fallback) {
+                          imgEl.dataset.fallback = "true";
+                          imgEl.src = "/images/placeholder.jpg";
+                        }
                       }}
                     />
                   </div>
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-end">
+
+                  {/* Selection Checkbox - shown in select mode */}
+                  {selectMode && (
+                    <div
+                      className={`absolute top-2 left-2 w-6 h-6 rounded flex items-center justify-center transition-all ${
+                        selectedImages.has(img.id)
+                          ? "bg-blue-500 text-white"
+                          : img.used_in.length > 0
+                            ? "bg-gray-300 dark:bg-gray-600 text-gray-500"
+                            : "bg-white/90 dark:bg-black/50 text-gray-400 group-hover:text-gray-600"
+                      }`}
+                    >
+                      {selectedImages.has(img.id) ? (
+                        <Check className="w-4 h-4" />
+                      ) : img.used_in.length > 0 ? (
+                        <X className="w-3 h-3" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                    </div>
+                  )}
+
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-end justify-between">
+                    {/* Top right - Expand button */}
+                    {!selectMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openFullPreview(img);
+                        }}
+                        className="m-2 p-1.5 bg-white/20 hover:bg-white/40 rounded-lg transition-colors"
+                        title="View full size"
+                      >
+                        <Maximize2 className="w-4 h-4 text-white" />
+                      </button>
+                    )}
+                    {/* Bottom info */}
                     <div className="p-2 w-full text-white">
                       <p className="text-xs truncate">{img.filename}</p>
                       <div className="flex items-center gap-2 mt-1">
@@ -716,7 +983,7 @@ export default function ImageLibraryPage() {
                     </div>
                   </div>
                   {img.used_in.length > 0 && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded">
+                    <div className={`absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded ${selectMode ? "" : ""}`}>
                       In Use
                     </div>
                   )}
@@ -725,51 +992,97 @@ export default function ImageLibraryPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredImages.map((img) => (
-                <div
-                  key={img.id}
-                  onClick={() => setSelectedImage(img)}
-                  className={`flex items-center gap-4 p-3 bg-white dark:bg-[#0F2A3C] rounded-lg border cursor-pointer ${
-                    selectedImage?.id === img.id ? "border-[#2C8A5B] ring-2 ring-[#2C8A5B]/20" : "border-gray-200 dark:border-[#1a3d52]"
-                  } hover:border-[#2C8A5B]/60`}
-                >
-                  <div className="w-24 h-16 bg-gray-100 dark:bg-[#1a3d52] rounded overflow-hidden flex-shrink-0">
-                    <img
-                      src={img.public_url}
-                      alt={img.filename}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate text-gray-900 dark:text-white">{img.filename}</p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      <span className="bg-gray-100 dark:bg-[#1a3d52] px-2 py-0.5 rounded">{img.source}</span>
-                      <span>{img.category}</span>
-                      {img.used_in.length > 0 && (
-                        <span className="text-green-600 dark:text-green-400">Used in {img.used_in.length} article(s)</span>
-                      )}
+              {filteredImages.map((img) => {
+                const isSelected = selectedImages.has(img.id);
+                const isInUse = img.used_in.length > 0;
+                const canSelect = selectMode && !isInUse;
+
+                return (
+                  <div
+                    key={img.id}
+                    onClick={() => {
+                      if (selectMode && !isInUse) {
+                        toggleImageSelection(img.id);
+                      } else if (!selectMode) {
+                        setSelectedImage(img);
+                      }
+                    }}
+                    className={`flex items-center gap-4 p-3 bg-white dark:bg-[#0F2A3C] rounded-lg border cursor-pointer ${
+                      isSelected
+                        ? "border-[#2C8A5B] ring-2 ring-[#2C8A5B]/20 bg-[#2C8A5B]/5"
+                        : selectedImage?.id === img.id
+                          ? "border-[#2C8A5B] ring-2 ring-[#2C8A5B]/20"
+                          : "border-gray-200 dark:border-[#1a3d52]"
+                    } hover:border-[#2C8A5B]/60 ${selectMode && isInUse ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    {/* Selection Checkbox */}
+                    {selectMode && (
+                      <div
+                        className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${
+                          isSelected
+                            ? "bg-[#2C8A5B] text-white"
+                            : isInUse
+                              ? "bg-gray-200 dark:bg-gray-700 text-gray-400"
+                              : "bg-gray-100 dark:bg-[#1a3d52] text-gray-400"
+                        }`}
+                      >
+                        {isSelected ? (
+                          <Check className="w-4 h-4" />
+                        ) : isInUse ? (
+                          <X className="w-3 h-3" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                      </div>
+                    )}
+
+                    <div className="w-24 h-16 bg-gray-100 dark:bg-[#1a3d52] rounded overflow-hidden flex-shrink-0">
+                      <img
+                        src={getImageUrl(img.public_url)}
+                        alt={img.filename}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const imgEl = e.target as HTMLImageElement;
+                          if (!imgEl.dataset.fallback) {
+                            imgEl.dataset.fallback = "true";
+                            imgEl.src = "/images/placeholder.jpg";
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate text-gray-900 dark:text-white">{img.filename}</p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <span className="bg-gray-100 dark:bg-[#1a3d52] px-2 py-0.5 rounded">{img.source}</span>
+                        <span>{img.category}</span>
+                        {isInUse && (
+                          <span className="text-green-600 dark:text-green-400">Used in {img.used_in.length} article(s)</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(img.id, img.is_favorite);
+                        }}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-[#1a3d52] rounded"
+                      >
+                        <Star
+                          className={`w-4 h-4 ${
+                            img.is_favorite ? "fill-yellow-400 text-yellow-400" : "text-gray-400 dark:text-gray-500"
+                          }`}
+                        />
+                      </button>
+                      <span className={`text-sm font-medium ${getScoreColor(img.ai_evaluation?.quality_score || 0)}`}>
+                        {(img.ai_evaluation?.quality_score || 0).toFixed(0)}%
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(img.id, img.is_favorite);
-                      }}
-                      className="p-2 hover:bg-gray-100 dark:hover:bg-[#1a3d52] rounded"
-                    >
-                      <Star
-                        className={`w-4 h-4 ${
-                          img.is_favorite ? "fill-yellow-400 text-yellow-400" : "text-gray-400 dark:text-gray-500"
-                        }`}
-                      />
-                    </button>
-                    <span className={`text-sm font-medium ${getScoreColor(img.ai_evaluation?.quality_score || 0)}`}>
-                      {(img.ai_evaluation?.quality_score || 0).toFixed(0)}%
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -778,12 +1091,25 @@ export default function ImageLibraryPage() {
         {selectedImage && (
           <div className="w-96 bg-white dark:bg-[#0F2A3C] border-l border-gray-200 dark:border-[#1a3d52] p-6 overflow-y-auto">
             <div className="space-y-6">
-              <div className="aspect-video bg-gray-100 dark:bg-[#1a3d52] rounded-lg overflow-hidden">
+              <div className="aspect-video bg-gray-100 dark:bg-[#1a3d52] rounded-lg overflow-hidden relative group cursor-pointer" onClick={() => openFullPreview(selectedImage)}>
                 <img
-                  src={selectedImage.public_url}
+                  src={getImageUrl(selectedImage.public_url)}
                   alt={selectedImage.filename}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const imgEl = e.target as HTMLImageElement;
+                    if (!imgEl.dataset.fallback) {
+                      imgEl.dataset.fallback = "true";
+                      imgEl.src = "/images/placeholder.jpg";
+                    }
+                  }}
                 />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <Maximize2 className="w-5 h-5 text-white" />
+                    <span className="text-white text-sm font-medium">View Full Size</span>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -1297,7 +1623,12 @@ export default function ImageLibraryPage() {
                           <img
                             src={ref.src}
                             alt={ref.name}
+                            loading="lazy"
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const imgEl = e.target as HTMLImageElement;
+                              imgEl.style.opacity = '0.5';
+                            }}
                           />
                           {selectedRefImages.includes(ref.id) && (
                             <div className="absolute inset-0 bg-emerald-500/30 flex items-center justify-center">
@@ -1332,7 +1663,7 @@ export default function ImageLibraryPage() {
                               }`}
                             >
                               <img
-                                src={img.public_url}
+                                src={getImageUrl(img.public_url)}
                                 alt=""
                                 className="w-full h-full object-cover"
                               />
@@ -1565,6 +1896,10 @@ export default function ImageLibraryPage() {
                           alt={image.description || "Stock image"}
                           className="w-full h-full object-cover"
                           loading="lazy"
+                          onError={(e) => {
+                            const imgEl = e.target as HTMLImageElement;
+                            imgEl.src = "/images/placeholder.jpg";
+                          }}
                         />
                       </div>
 
@@ -1640,6 +1975,324 @@ export default function ImageLibraryPage() {
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-Page Preview Modal */}
+      {showFullPreview && previewImage && (
+        <div className="fixed inset-0 bg-black/95 z-50 flex">
+          {/* Close Button */}
+          <button
+            onClick={() => setShowFullPreview(false)}
+            className="absolute top-4 right-4 z-10 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <X className="w-6 h-6 text-white" />
+          </button>
+
+          {/* Main Content Area with Navigation */}
+          <div className="flex-1 flex items-center justify-center p-8 relative">
+            {/* Previous Button */}
+            <button
+              onClick={() => navigatePreview('prev')}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <ChevronLeft className="w-8 h-8 text-white" />
+            </button>
+
+            {/* Next Button */}
+            <button
+              onClick={() => navigatePreview('next')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <ChevronRight className="w-8 h-8 text-white" />
+            </button>
+
+            <div className="max-w-5xl w-full max-h-full">
+              <img
+                src={getImageUrl(previewImage.public_url)}
+                alt={previewImage.filename}
+                className="max-w-full max-h-[80vh] mx-auto object-contain rounded-lg shadow-2xl"
+                onError={(e) => {
+                  const imgEl = e.target as HTMLImageElement;
+                  if (!imgEl.dataset.fallback) {
+                    imgEl.dataset.fallback = "true";
+                    imgEl.src = "/images/placeholder.jpg";
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Right Panel - Details */}
+          <div className="w-96 bg-[#0F2A3C] border-l border-[#1a3d52] overflow-y-auto">
+            <div className="p-6 space-y-6">
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white truncate max-w-[280px]">{previewImage.filename}</h2>
+                  <p className="text-sm text-gray-400 mt-1">ID: {previewImage.id}</p>
+                </div>
+                {previewImage.is_favorite && (
+                  <Star className="w-5 h-5 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+                )}
+              </div>
+
+              {/* URL Copy Section */}
+              <div className="bg-[#1a3d52] rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400 uppercase tracking-wider">Public URL</span>
+                  <button
+                    onClick={() => copyToClipboard(previewImage.public_url)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
+                      copied
+                        ? "bg-green-600 text-white"
+                        : "bg-[#0F2A3C] hover:bg-[#0a1f2d] text-gray-300"
+                    }`}
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3 h-3" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-300 break-all font-mono">{previewImage.public_url}</p>
+              </div>
+
+              {/* Metadata Grid */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Source</p>
+                  <p className="font-medium capitalize text-white">{previewImage.source}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Category</p>
+                  <p className="font-medium text-white">{previewImage.category || "Uncategorized"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Dimensions</p>
+                  <p className="font-medium text-white">
+                    {previewImage.metadata?.width || 0} × {previewImage.metadata?.height || 0}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">File Size</p>
+                  <p className="font-medium text-white">
+                    {previewImage.metadata?.file_size
+                      ? `${(previewImage.metadata.file_size / 1024).toFixed(0)} KB`
+                      : "Unknown"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Format</p>
+                  <p className="font-medium uppercase text-white">{previewImage.metadata?.format || "jpeg"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Created</p>
+                  <p className="font-medium text-white">
+                    {new Date(previewImage.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Quality Scores */}
+              <div className="bg-[#1a3d52] rounded-lg p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#2C8A5B]" />
+                  AI Quality Assessment
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Quality Score</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-[#0F2A3C] rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            (previewImage.ai_evaluation?.quality_score || 0) >= 80
+                              ? "bg-green-500"
+                              : (previewImage.ai_evaluation?.quality_score || 0) >= 60
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
+                          }`}
+                          style={{ width: `${previewImage.ai_evaluation?.quality_score || 0}%` }}
+                        />
+                      </div>
+                      <span className={`text-sm font-bold ${getScoreColor(previewImage.ai_evaluation?.quality_score || 0)}`}>
+                        {(previewImage.ai_evaluation?.quality_score || 0).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Brand Alignment</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-[#0F2A3C] rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            (previewImage.ai_evaluation?.brand_alignment || 0) >= 80
+                              ? "bg-green-500"
+                              : (previewImage.ai_evaluation?.brand_alignment || 0) >= 60
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
+                          }`}
+                          style={{ width: `${previewImage.ai_evaluation?.brand_alignment || 0}%` }}
+                        />
+                      </div>
+                      <span className={`text-sm font-bold ${getScoreColor(previewImage.ai_evaluation?.brand_alignment || 0)}`}>
+                        {(previewImage.ai_evaluation?.brand_alignment || 0).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Description */}
+              {previewImage.ai_evaluation?.description && (
+                <div>
+                  <h3 className="text-xs text-gray-400 uppercase tracking-wider mb-2">AI Description</h3>
+                  <p className="text-sm text-gray-300 leading-relaxed">{previewImage.ai_evaluation.description}</p>
+                </div>
+              )}
+
+              {/* Dominant Colors */}
+              {previewImage.ai_evaluation?.dominant_colors?.length > 0 && (
+                <div>
+                  <h3 className="text-xs text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <Palette className="w-3 h-3" />
+                    Dominant Colors
+                  </h3>
+                  <div className="flex gap-2">
+                    {previewImage.ai_evaluation.dominant_colors.map((color, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => copyToClipboard(color)}
+                        className="group relative w-10 h-10 rounded-lg border border-white/20 shadow-sm cursor-pointer hover:scale-110 transition-transform"
+                        style={{ backgroundColor: color }}
+                        title={`Click to copy: ${color}`}
+                      >
+                        <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          {color}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tags */}
+              {previewImage.ai_evaluation?.tags?.length > 0 && (
+                <div>
+                  <h3 className="text-xs text-gray-400 uppercase tracking-wider mb-2">AI Tags</h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {previewImage.ai_evaluation.tags.map((tag) => (
+                      <span key={tag} className="bg-[#1a3d52] text-gray-300 px-2.5 py-1 rounded-full text-xs">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Used In Articles */}
+              {previewImage.used_in.length > 0 && (
+                <div>
+                  <h3 className="text-xs text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <Link className="w-3 h-3" />
+                    Used in {previewImage.used_in.length} Article{previewImage.used_in.length > 1 ? "s" : ""}
+                  </h3>
+                  <div className="space-y-1">
+                    {previewImage.used_in.map((slug) => (
+                      <a
+                        key={slug}
+                        href={`https://jasperfinance.org/insights/${slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-[#2C8A5B] hover:text-[#1E6B45] transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {slug}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Attribution */}
+              {previewImage.attribution?.photographer && (
+                <div className="bg-[#1a3d52] rounded-lg p-3">
+                  <h3 className="text-xs text-gray-400 uppercase tracking-wider mb-2">Attribution</h3>
+                  <p className="text-sm text-gray-300">
+                    Photo by <strong>{previewImage.attribution.photographer}</strong>
+                    {previewImage.attribution.source_name && (
+                      <span> on {previewImage.attribution.source_name}</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    License: {previewImage.attribution.license}
+                  </p>
+                </div>
+              )}
+
+              {/* Generation Prompt */}
+              {previewImage.prompt && (
+                <div>
+                  <h3 className="text-xs text-gray-400 uppercase tracking-wider mb-2">Generation Prompt</h3>
+                  <p className="text-xs text-gray-300 bg-[#1a3d52] p-3 rounded-lg font-mono">{previewImage.prompt}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t border-[#1a3d52]">
+                <button
+                  onClick={() => toggleFavorite(previewImage.id, previewImage.is_favorite)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-colors ${
+                    previewImage.is_favorite
+                      ? "bg-yellow-900/30 border border-yellow-600 text-yellow-400"
+                      : "bg-[#1a3d52] hover:bg-[#234a62] text-gray-300"
+                  }`}
+                >
+                  <Star className={`w-4 h-4 ${previewImage.is_favorite ? "fill-yellow-400" : ""}`} />
+                  {previewImage.is_favorite ? "Favorited" : "Favorite"}
+                </button>
+                <a
+                  href={previewImage.public_url}
+                  download
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#1a3d52] hover:bg-[#234a62] text-gray-300 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                </a>
+                <button
+                  onClick={() => {
+                    if (previewImage.used_in.length === 0) {
+                      deleteImage(previewImage.id);
+                      setShowFullPreview(false);
+                    }
+                  }}
+                  disabled={previewImage.used_in.length > 0}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-900/30 border border-red-800 text-red-400 hover:bg-red-900/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title={previewImage.used_in.length > 0 ? "Cannot delete image in use" : "Delete image"}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {previewImage.used_in.length > 0 && (
+                <p className="text-xs text-gray-500 text-center">
+                  Images in use cannot be deleted
+                </p>
+              )}
+
+              {/* Image Index Indicator */}
+              <div className="text-center text-xs text-gray-500">
+                {filteredImages.findIndex(img => img.id === previewImage.id) + 1} of {filteredImages.length}
               </div>
             </div>
           </div>

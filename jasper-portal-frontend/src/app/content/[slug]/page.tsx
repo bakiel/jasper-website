@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -18,14 +18,35 @@ import {
   X,
   CheckCircle,
   Sparkles,
+  Globe,
+  FileText,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  Code,
+  LayoutGrid,
+  Upload,
 } from "lucide-react";
+// New BlockNote editor and serializers
+import { BlockNoteEditor } from "@/components/content/BlockNoteEditor";
+import { BlockNoteErrorBoundary } from "@/components/content/BlockNoteErrorBoundary";
+import {
+  ContentBlock,
+  contentBlocksToBlockNote,
+  contentBlocksToMarkdown,
+  blockNoteToContentBlocks,
+  blockNoteToMarkdown,
+  markdownToBlockNote,
+} from "@/lib/content-serializers";
 
 interface Article {
   slug: string;
   title: string;
   content: string;
+  content_blocks?: ContentBlock[]; // Block-based content
   excerpt: string;
   category: string;
+  author?: string;
   status: string;
   seoTitle: string;
   seoDescription: string;
@@ -39,6 +60,15 @@ interface Article {
     sources: Array<{ title: string; url: string }>;
     grounding_confidence: number;
   };
+}
+
+interface Author {
+  id: string;
+  name: string;
+  role?: string;
+  avatar?: string;
+  bio?: string;
+  isDefault?: boolean;
 }
 
 // Updated to match backend LibraryImage.to_dict() response
@@ -76,6 +106,102 @@ const CATEGORIES = [
   "general",
 ];
 
+// Gallery Preview Component - calculates optimal sizes for images
+interface GalleryPreviewProps {
+  images: Array<{ url: string; caption: string }>;
+  caption?: string;
+  resolveImageUrl: (url: string) => string;
+}
+
+function GalleryPreview({ images, caption, resolveImageUrl }: GalleryPreviewProps) {
+  const [imageDimensions, setImageDimensions] = useState<Map<number, { width: number; height: number }>>(new Map());
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const handleImageLoad = (index: number, e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setImageDimensions(prev => {
+      const newMap = new Map(prev);
+      newMap.set(index, { width: img.naturalWidth, height: img.naturalHeight });
+      return newMap;
+    });
+  };
+
+  // Calculate optimal sizes: H = (Width - gaps) / sum(aspectRatios)
+  const calculatedSizes = React.useMemo(() => {
+    if (imageDimensions.size !== images.length || images.length === 0) {
+      return null;
+    }
+
+    const gap = 8;
+    const maxHeight = 220;
+    const containerWidth = containerRef.current?.clientWidth || 500;
+    const availableWidth = containerWidth - (images.length - 1) * gap;
+
+    let sumAspectRatios = 0;
+    const aspectRatios: number[] = [];
+
+    for (let i = 0; i < images.length; i++) {
+      const dim = imageDimensions.get(i);
+      if (dim) {
+        const ar = dim.width / dim.height;
+        aspectRatios.push(ar);
+        sumAspectRatios += ar;
+      }
+    }
+
+    if (sumAspectRatios === 0) return null;
+
+    let commonHeight = availableWidth / sumAspectRatios;
+    if (commonHeight > maxHeight) commonHeight = maxHeight;
+
+    const widths = aspectRatios.map(ar => Math.floor(commonHeight * ar));
+
+    return { height: Math.floor(commonHeight), widths };
+  }, [imageDimensions, images.length]);
+
+  return (
+    <div className="my-4">
+      <div
+        ref={containerRef}
+        className="flex items-end justify-center gap-2"
+        style={{ width: "100%" }}
+      >
+        {images.map((img, idx) => {
+          const hasCalculatedSize = calculatedSizes && calculatedSizes.widths[idx];
+          return (
+            <div
+              key={idx}
+              className="rounded-lg overflow-hidden bg-gray-50"
+              style={hasCalculatedSize ? {
+                width: `${calculatedSizes.widths[idx]}px`,
+                height: `${calculatedSizes.height}px`,
+              } : {
+                height: "180px",
+              }}
+            >
+              <img
+                src={resolveImageUrl(img.url)}
+                alt={img.caption || `Gallery image ${idx + 1}`}
+                className="w-full h-full object-cover"
+                onLoad={(e) => handleImageLoad(idx, e)}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = "none";
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      {caption && (
+        <p className="mt-2 text-sm text-gray-600 italic text-center">
+          {caption}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function ArticleEditorPage() {
   const params = useParams();
   const router = useRouter();
@@ -102,20 +228,103 @@ export default function ArticleEditorPage() {
   const [content, setContent] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [category, setCategory] = useState("");
+  const [author, setAuthor] = useState("JASPER Research Team");
+  const [authors, setAuthors] = useState<Author[]>([]);
+  const [authorSuggestion, setAuthorSuggestion] = useState<{
+    author_id: string;
+    author_name: string;
+    confidence: number;
+    reasoning: string;
+  } | null>(null);
+  const [suggestingAuthor, setSuggestingAuthor] = useState(false);
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [heroImage, setHeroImage] = useState("");
   const [heroImageId, setHeroImageId] = useState<string | null>(null);
   const [tagsInput, setTagsInput] = useState("");
+  const [status, setStatus] = useState<string>("draft");
+  const [publishing, setPublishing] = useState(false);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+
+  // Mobile responsive state
+  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
+
+  // Block editor state
+  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
+  // Default to markdown mode - reliable and always works
+  // BlockNote (blocks mode) is optional enhancement
+  const [editorMode, setEditorMode] = useState<"blocks" | "markdown">("markdown");
+  const [inlineImageBlockId, setInlineImageBlockId] = useState<string | null>(null);
+
+  // Drag and drop state for image picker modal
+  const [isDraggingUpload, setIsDraggingUpload] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
+    fetchAuthors(); // Always fetch authors for the dropdown
     if (slug && slug !== "new") {
       fetchArticle();
     } else {
       setLoading(false);
     }
   }, [slug]);
+
+  const fetchAuthors = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/blog/authors`);
+      if (res.ok) {
+        const data = await res.json();
+        setAuthors(data.authors || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch authors:", error);
+    }
+  };
+
+  // AI-powered author suggestion
+  const suggestAuthor = async () => {
+    if (!title && !content) {
+      alert("Add some content first for AI to analyze");
+      return;
+    }
+
+    try {
+      setSuggestingAuthor(true);
+      setAuthorSuggestion(null);
+
+      const res = await fetch(`${API_BASE}/api/v1/blog/authors/suggest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title || "Untitled",
+          content: content || excerpt || "",
+          category: category || null,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.suggestion) {
+          setAuthorSuggestion(data.suggestion);
+        }
+      } else {
+        console.error("AI suggestion failed");
+      }
+    } catch (error) {
+      console.error("Failed to get author suggestion:", error);
+    } finally {
+      setSuggestingAuthor(false);
+    }
+  };
+
+  // Apply AI suggestion
+  const applyAuthorSuggestion = () => {
+    if (authorSuggestion) {
+      setAuthor(authorSuggestion.author_name);
+      setAuthorSuggestion(null);
+    }
+  };
 
   // Filter images when search/filters change
   useEffect(() => {
@@ -162,21 +371,86 @@ export default function ArticleEditorPage() {
     setFilteredImages(filtered);
   }, [images, imageSearch, imageCategory, showFavoritesOnly, showHeroSuitableOnly]);
 
+  // Resolve image URLs to full paths for consistent rendering
+  // Handles: full URLs, relative paths, blob URLs, and bare filenames
+  const resolveImageUrl = (url: string) => {
+    if (!url) return "";
+    // Already a full URL (including blob URLs for in-session uploads)
+    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("blob:")) return url;
+    // Relative path starting with /
+    if (url.startsWith("/")) return `${API_BASE}${url}`;
+    // Just a filename - try to resolve through image library API
+    // This handles legacy data where only filename was stored
+    if (url.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
+      return `${API_BASE}/api/v1/images/library/serve/${encodeURIComponent(url)}`;
+    }
+    // Fallback
+    return `${API_BASE}/${url}`;
+  };
+
+  // Normalize image URLs in content blocks when loading from API
+  // This ensures Preview pane and BlockNote editor use the same full URLs
+  const normalizeContentBlocks = (blocks: ContentBlock[]): ContentBlock[] => {
+    return blocks.map(block => {
+      if ((block.type === "image" || block.type === "infographic") && block.image_url) {
+        return {
+          ...block,
+          image_url: resolveImageUrl(block.image_url)
+        };
+      }
+      // Also normalize gallery image URLs
+      if (block.type === "gallery" && block.images) {
+        return {
+          ...block,
+          images: block.images.map(img => ({
+            ...img,
+            url: resolveImageUrl(img.url)
+          }))
+        };
+      }
+      return block;
+    });
+  };
+
   const fetchArticle = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/v1/blog/posts/${slug}`);
       if (!res.ok) throw new Error("Article not found");
-      const data = await res.json();
+      const response = await res.json();
+      // API returns { success: true, post: {...} } - unwrap the post object
+      const data = response.post || response;
       setArticle(data);
       setTitle(data.title || "");
       setContent(data.content || "");
       setExcerpt(data.excerpt || "");
       setCategory(data.category || "DFI Insights");
-      setSeoTitle(data.seoTitle || "");
-      setSeoDescription(data.seoDescription || "");
+      setAuthor(data.author || "JASPER Research Team");
+      setSeoTitle(data.seoTitle || data.seo_title || "");
+      setSeoDescription(data.seoDescription || data.seo_description || "");
       setTags(data.tags || []);
-      setHeroImage(data.heroImage || "");
-      setHeroImageId(data.heroImageId || null);
+      setHeroImage(data.heroImage || data.hero_image || "");
+      setHeroImageId(data.heroImageId || data.hero_image_id || null);
+      setStatus(data.status || "draft");
+
+      // Load content blocks if available, otherwise convert markdown to blocks
+      // Keep editor in markdown mode (default) - user can switch to blocks if desired
+      if (data.content_blocks && data.content_blocks.length > 0) {
+        // CRITICAL: Normalize image URLs when loading from API
+        // This ensures Preview pane displays images correctly (same as BlockNote editor)
+        setContentBlocks(normalizeContentBlocks(data.content_blocks));
+        // Don't auto-switch to blocks mode - let user choose
+      } else if (data.content) {
+        // Convert existing markdown content to blocks for backup
+        try {
+          const blockNoteBlocks = markdownToBlockNote(data.content);
+          const contentBlocksFromMd = blockNoteToContentBlocks(blockNoteBlocks as any);
+          // Also normalize URLs from markdown conversion
+          setContentBlocks(normalizeContentBlocks(contentBlocksFromMd));
+        } catch (e) {
+          console.warn("Failed to convert markdown to blocks:", e);
+        }
+        // Don't auto-switch to blocks mode - markdown is reliable default
+      }
     } catch (error) {
       console.error("Failed to fetch article:", error);
     } finally {
@@ -209,30 +483,105 @@ export default function ArticleEditorPage() {
     }
   };
 
+  // Upload image via drag and drop in modal
+  const handleModalImageUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      alert("Please drop an image file");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", category || "general");
+
+      const res = await fetch(`${API_BASE}/api/v1/images/library/`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      // Refresh image library to show the new image
+      await fetchImages();
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  // Drag and drop handlers for modal upload zone
+  const handleUploadDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleUploadDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingUpload(true);
+  };
+
+  const handleUploadDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingUpload(false);
+  };
+
+  const handleUploadDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingUpload(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleModalImageUpload(files[0]);
+    }
+  };
+
+  // File input handler for click-to-upload
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleModalImageUpload(files[0]);
+    }
+  };
+
   const saveArticle = async () => {
     setSaving(true);
     try {
+      // NOTE: API endpoint is /api/v1/blog/posts (no "admin" in path)
       const endpoint =
         slug === "new"
-          ? `${API_BASE}/api/v1/blog/admin/posts`
-          : `${API_BASE}/api/v1/blog/admin/posts/${slug}`;
+          ? `${API_BASE}/api/v1/blog/posts`
+          : `${API_BASE}/api/v1/blog/posts/${slug}`;
 
       const method = slug === "new" ? "POST" : "PUT";
+
+      // Generate markdown from blocks if in block mode
+      const finalContent = editorMode === "blocks"
+        ? contentBlocksToMarkdown(contentBlocks)
+        : content;
 
       const res = await fetch(endpoint, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          content,
+          content: finalContent,
+          content_blocks: contentBlocks, // Save blocks for structured editing
           excerpt,
           category,
+          author,
           seoTitle: seoTitle || title.slice(0, 60),
           seoDescription: seoDescription || excerpt.slice(0, 160),
           tags,
           heroImage,
           heroImageId,
-          status: article?.status || "draft",
+          status,
         }),
       });
 
@@ -248,6 +597,51 @@ export default function ArticleEditorPage() {
       console.error("Failed to save article:", error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const publishArticle = async () => {
+    if (!slug || slug === "new") return;
+
+    setPublishing(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/blog/posts/${slug}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_share: false }),
+      });
+
+      if (res.ok) {
+        setStatus("published");
+        fetchArticle(); // Refresh to get updated data
+      }
+    } catch (error) {
+      console.error("Failed to publish article:", error);
+    } finally {
+      setPublishing(false);
+      setShowStatusMenu(false);
+    }
+  };
+
+  const unpublishArticle = async () => {
+    if (!slug || slug === "new") return;
+
+    setPublishing(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/blog/posts/${slug}/unpublish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.ok) {
+        setStatus("draft");
+        fetchArticle(); // Refresh to get updated data
+      }
+    } catch (error) {
+      console.error("Failed to unpublish article:", error);
+    } finally {
+      setPublishing(false);
+      setShowStatusMenu(false);
     }
   };
 
@@ -277,8 +671,35 @@ export default function ArticleEditorPage() {
   };
 
   const selectImage = async (img: ImageEntry) => {
-    setHeroImage(img.public_url);
-    setHeroImageId(img.id);
+    // Normalize URL to full path at storage time
+    // This ensures images display correctly in both editor and preview
+    const normalizedUrl = img.public_url.startsWith("http://") || img.public_url.startsWith("https://")
+      ? img.public_url
+      : img.public_url.startsWith("/")
+        ? `${API_BASE}${img.public_url}`
+        : `${API_BASE}/api/v1/images/library/serve/${encodeURIComponent(img.public_url)}`;
+
+    // Check if this is for an inline block image or hero image
+    if (inlineImageBlockId) {
+      // Update the block with the selected image
+      const newBlocks = contentBlocks.map((block) =>
+        block.id === inlineImageBlockId
+          ? {
+              ...block,
+              image_id: img.id,
+              image_url: normalizedUrl,
+              alt_text: img.ai_evaluation?.description || img.filename,
+            }
+          : block
+      );
+      setContentBlocks(newBlocks);
+      setInlineImageBlockId(null);
+    } else {
+      // Hero image selection
+      setHeroImage(normalizedUrl);
+      setHeroImageId(img.id);
+    }
+
     setShowImagePicker(false);
 
     // Mark image as used in this article
@@ -287,19 +708,14 @@ export default function ArticleEditorPage() {
     }
   };
 
-  const openImagePicker = () => {
+  const openImagePicker = (forBlockId?: string) => {
     fetchImages();
     setImageSearch("");
     setImageCategory("all");
     setShowFavoritesOnly(false);
-    setShowHeroSuitableOnly(true);
+    setShowHeroSuitableOnly(forBlockId ? false : true); // Hero images need suitability check
+    setInlineImageBlockId(forBlockId || null);
     setShowImagePicker(true);
-  };
-
-  const resolveImageUrl = (url: string) => {
-    if (!url) return "";
-    if (url.startsWith("/")) return `${API_BASE}${url}`;
-    return url;
   };
 
   // Enhanced markdown to HTML renderer
@@ -356,23 +772,76 @@ export default function ArticleEditorPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="bg-white border-b px-4 py-3 sticky top-0 z-20">
-        <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
-          <div className="flex items-center gap-4">
-            <Link href="/content" className="p-2 hover:bg-gray-100 rounded">
+      <div className="bg-white border-b px-3 sm:px-4 py-2 sm:py-3 sticky top-0 z-20">
+        <div className="flex flex-wrap items-center justify-between gap-2 max-w-screen-2xl mx-auto">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/content" className="p-1.5 sm:p-2 hover:bg-gray-100 rounded">
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="font-semibold text-gray-900">
+              <h1 className="font-semibold text-gray-900 text-sm sm:text-base">
                 {slug === "new" ? "New Article" : "Edit Article"}
               </h1>
-              <p className="text-sm text-gray-500">{article?.status || "draft"}</p>
+              <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
+                {/* Status Badge */}
+                <div
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                    status === "published"
+                      ? "bg-green-100 text-green-700"
+                      : status === "scheduled"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {status === "published" ? (
+                    <Globe className="w-3 h-3" />
+                  ) : status === "scheduled" ? (
+                    <Eye className="w-3 h-3" />
+                  ) : (
+                    <FileText className="w-3 h-3" />
+                  )}
+                  {status === "published" ? "Published" : status === "scheduled" ? "Scheduled" : "Draft"}
+                </div>
+
+                {/* Publish/Unpublish Button */}
+                {slug !== "new" && (
+                  <div className="relative">
+                    {status === "published" ? (
+                      <button
+                        onClick={unpublishArticle}
+                        disabled={publishing}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                      >
+                        {publishing ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <EyeOff className="w-3 h-3" />
+                        )}
+                        Unpublish
+                      </button>
+                    ) : (
+                      <button
+                        onClick={publishArticle}
+                        disabled={publishing}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-full transition-colors"
+                      >
+                        {publishing ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Globe className="w-3 h-3" />
+                        )}
+                        Publish
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Preview Mode Toggle */}
-            <div className="flex border rounded-lg overflow-hidden">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Desktop Preview Mode Toggle - hidden on mobile */}
+            <div className="hidden md:flex border rounded-lg overflow-hidden">
               <button
                 onClick={() => setPreviewMode("desktop")}
                 className={`p-2 ${
@@ -393,10 +862,10 @@ export default function ArticleEditorPage() {
               </button>
             </div>
 
-            {/* SEO Score Badge */}
+            {/* SEO Score Badge - compact on mobile */}
             {article?.seoScore !== undefined && (
               <div
-                className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
+                className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm ${
                   article.seoScore >= 70
                     ? "bg-green-100 text-green-700"
                     : article.seoScore >= 50
@@ -404,29 +873,29 @@ export default function ArticleEditorPage() {
                     : "bg-red-100 text-red-700"
                 }`}
               >
-                <TrendingUp className="w-4 h-4" />
-                SEO: {article.seoScore}%
+                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">SEO:</span> {article.seoScore}%
               </div>
             )}
 
             <button
               onClick={saveArticle}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm sm:text-base"
             >
               {saving ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              Save
+              <span className="hidden sm:inline">Save</span>
             </button>
 
             {slug !== "new" && (
               <a
                 href={`https://jasperfinance.org/insights/${slug}`}
                 target="_blank"
-                className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
               >
                 <ExternalLink className="w-4 h-4" />
                 View Live
@@ -436,10 +905,36 @@ export default function ArticleEditorPage() {
         </div>
       </div>
 
-      {/* Main Content - Split Pane */}
-      <div className="flex h-[calc(100vh-64px)]">
-        {/* Editor Panel */}
-        <div className="w-1/2 overflow-y-auto p-6 space-y-6">
+      {/* Mobile Edit/Preview Toggle - only visible on small screens */}
+      <div className="md:hidden flex bg-white border-b">
+        <button
+          onClick={() => setMobileView("edit")}
+          className={`flex-1 py-2.5 text-sm font-medium text-center ${
+            mobileView === "edit"
+              ? "text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => setMobileView("preview")}
+          className={`flex-1 py-2.5 text-sm font-medium text-center ${
+            mobileView === "preview"
+              ? "text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Preview
+        </button>
+      </div>
+
+      {/* Main Content - Split Pane (responsive) */}
+      <div className="flex flex-col md:flex-row h-[calc(100vh-105px)] md:h-[calc(100vh-64px)]">
+        {/* Editor Panel - full width on mobile, half on desktop */}
+        <div className={`w-full md:w-1/2 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 ${
+          mobileView === "edit" ? "block" : "hidden md:block"
+        }`}>
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
@@ -464,7 +959,7 @@ export default function ArticleEditorPage() {
                     className="w-full h-48 object-cover"
                   />
                   <button
-                    onClick={openImagePicker}
+                    onClick={() => openImagePicker()}
                     className="absolute bottom-2 right-2 flex items-center gap-2 px-3 py-1.5 bg-black/60 text-white text-sm rounded hover:bg-black/80"
                   >
                     <ImageIcon className="w-4 h-4" />
@@ -473,7 +968,7 @@ export default function ArticleEditorPage() {
                 </div>
               ) : (
                 <button
-                  onClick={openImagePicker}
+                  onClick={() => openImagePicker()}
                   className="w-full h-48 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-500"
                 >
                   <ImageIcon className="w-8 h-8 mb-2" />
@@ -495,20 +990,153 @@ export default function ArticleEditorPage() {
             />
           </div>
 
-          {/* Content */}
+          {/* Content - Block Editor or Markdown */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your article content here... (Markdown supported)"
-              rows={20}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-mono text-sm"
-            />
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">Content</label>
+              {/* Editor Mode Toggle */}
+              <div className="flex items-center gap-1 p-0.5 bg-gray-100 rounded-lg">
+                <button
+                  onClick={() => {
+                    if (editorMode === "markdown") {
+                      // Convert markdown to blocks when switching using new serializer
+                      const blockNoteBlocks = markdownToBlockNote(content);
+                      const blocks = blockNoteToContentBlocks(blockNoteBlocks as any);
+                      setContentBlocks(blocks);
+                    }
+                    setEditorMode("blocks");
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded ${
+                    editorMode === "blocks"
+                      ? "bg-white text-emerald-700 shadow-sm"
+                      : "text-gray-600 hover:text-gray-800"
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  Blocks
+                </button>
+                <button
+                  onClick={() => {
+                    if (editorMode === "blocks") {
+                      // Convert blocks to markdown when switching using new serializer
+                      const markdown = contentBlocksToMarkdown(contentBlocks);
+                      setContent(markdown);
+                    }
+                    setEditorMode("markdown");
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded ${
+                    editorMode === "markdown"
+                      ? "bg-white text-emerald-700 shadow-sm"
+                      : "text-gray-600 hover:text-gray-800"
+                  }`}
+                >
+                  <Code className="w-3.5 h-3.5" />
+                  Markdown
+                </button>
+              </div>
+            </div>
+
+            {editorMode === "blocks" && !loading ? (
+              <BlockNoteErrorBoundary
+                onFallbackToMarkdown={() => setEditorMode("markdown")}
+              >
+                <BlockNoteEditor
+                  key={`editor-${slug}`}
+                  initialBlocks={contentBlocks}
+                  initialContent={content}
+                  onChange={(markdown, blocks) => {
+                    setContentBlocks(blocks);
+                    setContent(markdown); // Keep markdown in sync
+                  }}
+                  apiBase={API_BASE}
+                />
+              </BlockNoteErrorBoundary>
+            ) : editorMode === "blocks" && loading ? (
+              <div className="border border-gray-200 rounded-lg p-8 bg-gray-50 animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3 mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ) : (
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your article content here... (Markdown supported)"
+                rows={20}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-mono text-sm"
+              />
+            )}
           </div>
 
-          {/* Category & Tags */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Author & Category - stack on mobile, side by side on desktop */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">Author</label>
+                <button
+                  type="button"
+                  onClick={suggestAuthor}
+                  disabled={suggestingAuthor || (!title && !content)}
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  title="AI will suggest the best author based on content"
+                >
+                  {suggestingAuthor ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      AI Suggest
+                    </>
+                  )}
+                </button>
+              </div>
+              <select
+                value={author}
+                onChange={(e) => {
+                  setAuthor(e.target.value);
+                  setAuthorSuggestion(null);
+                }}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+              >
+                {authors.length > 0 ? (
+                  authors.map((a) => (
+                    <option key={a.id} value={a.name}>
+                      {a.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="JASPER Research Team">JASPER Research Team</option>
+                )}
+              </select>
+
+              {/* AI Suggestion Display */}
+              {authorSuggestion && (
+                <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm font-medium text-purple-900">
+                        {authorSuggestion.author_name}
+                      </span>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                      {authorSuggestion.confidence}% match
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-2">{authorSuggestion.reasoning}</p>
+                  <button
+                    type="button"
+                    onClick={applyAuthorSuggestion}
+                    className="w-full px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Apply Suggestion
+                  </button>
+                </div>
+              )}
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
               <select
@@ -523,6 +1151,10 @@ export default function ArticleEditorPage() {
                 <option value="Case Studies">Case Studies</option>
               </select>
             </div>
+          </div>
+
+          {/* Tags */}
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
               <div className="flex flex-wrap gap-1 p-2 border rounded-lg min-h-[42px]">
@@ -607,9 +1239,11 @@ export default function ArticleEditorPage() {
           )}
         </div>
 
-        {/* Preview Panel */}
-        <div className="w-1/2 bg-white border-l overflow-hidden flex flex-col">
-          <div className="px-4 py-2 bg-gray-100 border-b flex items-center justify-between">
+        {/* Preview Panel - full width on mobile, half on desktop */}
+        <div className={`w-full md:w-1/2 bg-white md:border-l overflow-hidden flex flex-col ${
+          mobileView === "preview" ? "block" : "hidden md:flex"
+        }`}>
+          <div className="hidden md:flex px-4 py-2 bg-gray-100 border-b items-center justify-between">
             <span className="text-sm font-medium text-gray-600">Live Preview</span>
             <button
               onClick={updatePreview}
@@ -624,7 +1258,7 @@ export default function ArticleEditorPage() {
               previewMode === "mobile" ? "max-w-[375px] mx-auto border-x" : ""
             }`}
           >
-            <div key={previewKey} className="p-6">
+            <div key={previewKey} className="p-4 sm:p-6">
               {/* Preview Header */}
               {heroImage && (
                 <div className="aspect-video mb-6 rounded-lg overflow-hidden bg-gray-100">
@@ -644,12 +1278,12 @@ export default function ArticleEditorPage() {
               </div>
 
               {/* Preview Title */}
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
                 {title || "Article Title"}
               </h1>
 
               {/* Preview Excerpt */}
-              <p className="text-lg text-gray-600 mb-6 border-l-4 border-emerald-500 pl-4 italic">
+              <p className="text-base sm:text-lg text-gray-600 mb-4 sm:mb-6 border-l-4 border-emerald-500 pl-3 sm:pl-4 italic">
                 {excerpt || "Article excerpt will appear here..."}
               </p>
 
@@ -669,7 +1303,116 @@ export default function ArticleEditorPage() {
 
               {/* Preview Content */}
               <div className="prose prose-emerald max-w-none">
-                {content ? (
+                {editorMode === "blocks" && contentBlocks.length > 0 ? (
+                  <div className="space-y-4">
+                    {contentBlocks.map((block) => {
+                      switch (block.type) {
+                        case "heading":
+                          const HeadingTag = `h${block.level || 2}` as keyof JSX.IntrinsicElements;
+                          return (
+                            <HeadingTag key={block.id} className="font-bold text-gray-900">
+                              {block.content}
+                            </HeadingTag>
+                          );
+                        case "text":
+                          return (
+                            <div
+                              key={block.id}
+                              dangerouslySetInnerHTML={{
+                                __html: renderMarkdown(block.content || ""),
+                              }}
+                            />
+                          );
+                        case "image":
+                        case "infographic":
+                          const sizeClasses = {
+                            small: "max-w-xs",
+                            medium: "max-w-md",
+                            large: "max-w-2xl",
+                            full: "w-full",
+                          };
+                          const alignClasses = {
+                            left: "mr-auto",
+                            center: "mx-auto",
+                            right: "ml-auto",
+                          };
+                          return (
+                            <figure
+                              key={block.id}
+                              className={`${sizeClasses[block.size || "full"]} ${alignClasses[block.alignment || "center"]}`}
+                            >
+                              {block.image_url ? (
+                                <div className="relative">
+                                  <img
+                                    src={resolveImageUrl(block.image_url)}
+                                    alt={block.alt_text || ""}
+                                    className="rounded-lg shadow-md w-full"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = "none";
+                                      const fallback = target.nextElementSibling as HTMLElement;
+                                      if (fallback) fallback.classList.remove("hidden");
+                                    }}
+                                  />
+                                  <div className="hidden bg-gray-100 rounded-lg p-8 text-center text-gray-400">
+                                    <ImageIcon className="w-12 h-12 mx-auto mb-2" />
+                                    <p className="text-sm">Image not found</p>
+                                    <p className="text-xs mt-1 opacity-60">{block.image_url?.split("/").pop()}</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="bg-gray-100 rounded-lg p-8 text-center text-gray-400">
+                                  <ImageIcon className="w-12 h-12 mx-auto mb-2" />
+                                  <p>No image selected</p>
+                                </div>
+                              )}
+                              {block.caption && (
+                                <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
+                                  {block.caption}
+                                </figcaption>
+                              )}
+                            </figure>
+                          );
+                        case "quote":
+                          return (
+                            <blockquote
+                              key={block.id}
+                              className="border-l-4 border-emerald-500 pl-4 italic text-gray-700"
+                            >
+                              {block.content}
+                            </blockquote>
+                          );
+                        case "callout":
+                          return (
+                            <div
+                              key={block.id}
+                              className="bg-emerald-50 border border-emerald-200 rounded-lg p-4"
+                            >
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html: renderMarkdown(block.content || ""),
+                                }}
+                              />
+                            </div>
+                          );
+                        case "gallery":
+                          // Render gallery as horizontal images with equal heights
+                          const galleryImages = block.images || [];
+                          if (galleryImages.length === 0) return null;
+                          return (
+                            <GalleryPreview
+                              key={block.id}
+                              images={galleryImages}
+                              caption={block.caption}
+                              resolveImageUrl={resolveImageUrl}
+                            />
+                          );
+                        default:
+                          return null;
+                      }
+                    })}
+                  </div>
+                ) : content ? (
                   <div
                     dangerouslySetInnerHTML={{
                       __html: renderMarkdown(content),
@@ -692,7 +1435,9 @@ export default function ArticleEditorPage() {
             <div className="px-4 py-3 border-b flex items-center justify-between bg-gray-50">
               <div className="flex items-center gap-2">
                 <ImageIcon className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-semibold text-gray-900">Select Hero Image</h3>
+                <h3 className="font-semibold text-gray-900">
+                  {inlineImageBlockId ? "Select Inline Image" : "Select Hero Image"}
+                </h3>
                 <span className="text-sm text-gray-500">
                   ({filteredImages.length} images)
                 </span>
@@ -761,6 +1506,42 @@ export default function ArticleEditorPage() {
               </button>
             </div>
 
+            {/* Upload Drop Zone */}
+            <div className="px-4 pt-3">
+              <label
+                onDragOver={handleUploadDragOver}
+                onDragEnter={handleUploadDragEnter}
+                onDragLeave={handleUploadDragLeave}
+                onDrop={handleUploadDrop}
+                className={`relative flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
+                  isDraggingUpload
+                    ? "border-emerald-500 bg-emerald-50"
+                    : "border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400"
+                }`}
+              >
+                {isUploadingImage ? (
+                  <div className="flex items-center gap-2 text-emerald-600">
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <span className="text-sm font-medium">Uploading...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className={`w-6 h-6 mb-1 ${isDraggingUpload ? "text-emerald-600" : "text-gray-400"}`} />
+                    <p className={`text-sm ${isDraggingUpload ? "text-emerald-600 font-medium" : "text-gray-500"}`}>
+                      {isDraggingUpload ? "Drop image here" : "Drop image here or click to upload"}
+                    </p>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileInputChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={isUploadingImage}
+                />
+              </label>
+            </div>
+
             {/* Image Grid */}
             <div className="flex-1 overflow-y-auto p-4">
               {imagesLoading ? (
@@ -792,7 +1573,7 @@ export default function ArticleEditorPage() {
                       className="group relative aspect-video bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-emerald-500 focus:ring-2 focus:ring-emerald-500 text-left"
                     >
                       <img
-                        src={img.public_url}
+                        src={img.public_url.startsWith("/") ? `${API_BASE}${img.public_url}` : img.public_url}
                         alt={img.filename}
                         className="w-full h-full object-cover"
                       />

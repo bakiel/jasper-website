@@ -1,0 +1,28 @@
+{
+  "content": {
+    "weekly_articles": 5,
+    "enhancement_coverage_target": 0.8,
+    "citation_coverage_target": 0.7,
+    "notes": "Target 5 articles/week with 80% fully enhanced"
+  },
+  "leads": {
+    "weekly_newsletter_target": 20,
+    "weekly_contact_target": 5,
+    "notes": "Grow newsletter list, capture DFI-focused leads"
+  },
+  "quality": {
+    "enhancement_success_rate_target": 0.9,
+    "max_failed_tasks_per_day": 3,
+    "notes": "Maintain 90%+ success rate on auto-enhancements"
+  },
+  "brand": {
+    "focus_areas": [
+      "DFI Insights",
+      "Climate Finance",
+      "Project Finance",
+      "Financial Modelling"
+    ],
+    "target_audience": "African infrastructure developers, DFI officers, impact investors"
+  },
+  "updated_at": "2025-12-29T00:00:00Z"
+}

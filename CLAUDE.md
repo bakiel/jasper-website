@@ -8,6 +8,27 @@
 
 ---
 
+## CRITICAL: TWO SEPARATE FRONTEND SITES
+
+**READ SITE_ARCHITECTURE.md for full details.**
+
+| Site | URL | Tech | Has Blog/Search? | Local Source |
+|------|-----|------|------------------|--------------|
+| **Marketing** | jasperfinance.org | React/Vite | NO | This folder (root) |
+| **Portal** | portal.jasperfinance.org | Next.js | YES (/insights) | `./jasper-portal-frontend/` |
+
+### When adding features:
+- **Blog features** → Edit `jasper-portal-frontend/`
+- **Search features** → Edit `jasper-portal-frontend/` (insights page already has search at line 537)
+- **Marketing copy** → Edit this folder (root)
+
+### DO NOT:
+- Add blog/search to marketing site (wrong site)
+- Confuse the two package.json files
+- Deploy portal builds to marketing folder
+
+---
+
 ## SEO & KEYWORD RESEARCH
 
 ### Autonomous Workflow

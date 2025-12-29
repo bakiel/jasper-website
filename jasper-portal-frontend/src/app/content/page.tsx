@@ -25,6 +25,12 @@ import {
   Brain,
   AlertTriangle,
   Upload,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
+  Maximize2,
+  Minimize2,
+  X,
 } from "lucide-react";
 import { GradingBadge } from "@/components/content/ArticleGradeCard";
 
@@ -101,7 +107,21 @@ export default function ContentDashboardPage() {
   const [filterCategory, setFilterCategory] = useState<string>("");
   const [showBelowThreshold, setShowBelowThreshold] = useState(false);
   const [sortBy, setSortBy] = useState<string>("seoScore");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Column sort handler - click to toggle direction
+  const handleColumnSort = (column: string) => {
+    if (sortBy === column) {
+      // Toggle direction if same column
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      // New column, default to descending for scores, ascending for text
+      setSortBy(column);
+      setSortDirection(column === "title" || column === "category" ? "asc" : "desc");
+    }
+  };
 
   // AI Auto-Generate State
   const [showAutoGenDialog, setShowAutoGenDialog] = useState(false);
@@ -115,10 +135,22 @@ export default function ContentDashboardPage() {
   const [autoGenMode, setAutoGenMode] = useState<"manual" | "scheduled">("manual");
   const [scheduledEnabled, setScheduledEnabled] = useState(false);
   const [previewTopics, setPreviewTopics] = useState<string[]>([]);
+  const [improvingSlug, setImprovingSlug] = useState<string | null>(null);
 
   useEffect(() => {
     fetchArticles();
   }, []);
+
+  // ESC key handler for fullscreen
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isFullscreen]);
 
   const fetchArticles = async () => {
     try {
@@ -157,6 +189,38 @@ export default function ContentDashboardPage() {
       fetchArticles();
     } catch (error) {
       console.error("Failed to delete article:", error);
+    }
+  };
+
+  // AI Improve Article - Runs quality evaluation and auto-improvement
+  const improveArticle = async (slug: string) => {
+    try {
+      setImprovingSlug(slug);
+      const res = await fetch(`${API_BASE}/api/v1/articles/improve/${slug}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Failed to improve article");
+      }
+
+      const result = await res.json();
+
+      if (result.was_improved) {
+        alert(`Article improved! Score: ${result.original_score?.toFixed(0)}% → ${result.new_score?.toFixed(0)}%`);
+      } else {
+        alert(`Article already meets quality threshold (${result.current_score?.toFixed(0)}%)`);
+      }
+
+      // Refresh articles to show updated scores
+      fetchArticles();
+    } catch (error) {
+      console.error("Failed to improve article:", error);
+      alert(`Failed to improve article: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setImprovingSlug(null);
     }
   };
 
@@ -243,16 +307,25 @@ export default function ContentDashboardPage() {
       return true;
     })
     .sort((a, b) => {
-      if (sortBy === "seoScore") {
-        return (b.seoScore || 0) - (a.seoScore || 0);
+      const dir = sortDirection === "asc" ? 1 : -1;
+
+      switch (sortBy) {
+        case "seoScore":
+          return ((a.seoScore || 0) - (b.seoScore || 0)) * dir;
+        case "createdAt":
+        case "publishedAt":
+          const dateA = new Date(sortBy === "createdAt" ? a.createdAt : (a.publishedAt || a.createdAt)).getTime();
+          const dateB = new Date(sortBy === "createdAt" ? b.createdAt : (b.publishedAt || b.createdAt)).getTime();
+          return (dateA - dateB) * dir;
+        case "title":
+          return a.title.localeCompare(b.title) * dir;
+        case "category":
+          return (a.category || "").localeCompare(b.category || "") * dir;
+        case "status":
+          return (a.status || "").localeCompare(b.status || "") * dir;
+        default:
+          return 0;
       }
-      if (sortBy === "createdAt") {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-      if (sortBy === "title") {
-        return a.title.localeCompare(b.title);
-      }
-      return 0;
     });
 
   const getStatusIcon = (status: string) => {
@@ -279,7 +352,19 @@ export default function ContentDashboardPage() {
   const categories = Array.from(new Set(articles.map((a) => a.category).filter(Boolean)));
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0f14]">
+    <div className={`min-h-screen bg-gray-50 dark:bg-[#0a0f14] transition-all duration-300 ${
+      isFullscreen ? "fixed inset-0 z-50 overflow-auto" : ""
+    }`}>
+      {/* Fullscreen Exit Button (visible only in fullscreen) */}
+      {isFullscreen && (
+        <button
+          onClick={() => setIsFullscreen(false)}
+          className="fixed top-4 right-4 z-[60] p-2 bg-[#0F2A3C] text-white rounded-lg shadow-lg hover:bg-[#1a3d52] transition-colors"
+          title="Exit Fullscreen (ESC)"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      )}
       {/* Header - Clean Professional Design */}
       <div className="bg-white dark:bg-[#0F2A3C] border-b border-gray-200 dark:border-[#1a3d52]">
         {/* Top Row - Title & Quick Actions */}
@@ -323,6 +408,18 @@ export default function ContentDashboardPage() {
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
               Sync
+            </button>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-[#2C8A5B] dark:hover:text-[#2C8A5B] transition-colors"
+              title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            >
+              {isFullscreen ? (
+                <Minimize2 className="w-3.5 h-3.5" />
+              ) : (
+                <Maximize2 className="w-3.5 h-3.5" />
+              )}
+              {isFullscreen ? "Exit" : "Expand"}
             </button>
           </div>
         </div>
@@ -501,18 +598,108 @@ export default function ContentDashboardPage() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-[#0a1f2d] border-b border-gray-200 dark:border-[#1a3d52]">
                 <tr>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Article</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Category</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Status</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Quality Score</th>
+                  {/* Article - sortable by title */}
+                  <th
+                    onClick={() => handleColumnSort("title")}
+                    className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a3d52]/50 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Article
+                      {sortBy === "title" ? (
+                        sortDirection === "asc" ? (
+                          <ChevronUp className="w-4 h-4 text-[#2C8A5B]" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-[#2C8A5B]" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
+                  {/* Category - sortable */}
+                  <th
+                    onClick={() => handleColumnSort("category")}
+                    className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a3d52]/50 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Category
+                      {sortBy === "category" ? (
+                        sortDirection === "asc" ? (
+                          <ChevronUp className="w-4 h-4 text-[#2C8A5B]" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-[#2C8A5B]" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
+                  {/* Status - sortable */}
+                  <th
+                    onClick={() => handleColumnSort("status")}
+                    className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a3d52]/50 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Status
+                      {sortBy === "status" ? (
+                        sortDirection === "asc" ? (
+                          <ChevronUp className="w-4 h-4 text-[#2C8A5B]" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-[#2C8A5B]" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
+                  {/* Quality Score - sortable */}
+                  <th
+                    onClick={() => handleColumnSort("seoScore")}
+                    className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a3d52]/50 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Quality Score
+                      {sortBy === "seoScore" ? (
+                        sortDirection === "asc" ? (
+                          <ChevronUp className="w-4 h-4 text-[#2C8A5B]" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-[#2C8A5B]" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
+                  {/* Sync - not sortable */}
                   <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Sync</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Published</th>
+                  {/* Published Date - sortable */}
+                  <th
+                    onClick={() => handleColumnSort("publishedAt")}
+                    className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a3d52]/50 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Published
+                      {sortBy === "publishedAt" ? (
+                        sortDirection === "asc" ? (
+                          <ChevronUp className="w-4 h-4 text-[#2C8A5B]" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-[#2C8A5B]" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
                   <th className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-[#1a3d52]">
                 {filteredArticles.map((article) => (
-                  <tr key={article.slug} className="hover:bg-gray-50 dark:hover:bg-[#1a3d52]/50 transition-colors">
+                  <tr
+                    key={article.slug}
+                    className="hover:bg-gray-50 dark:hover:bg-[#1a3d52]/50 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/content/${article.slug}`)}
+                  >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {article.heroImage && (
@@ -588,13 +775,34 @@ export default function ContentDashboardPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {article.publishedAt
-                          ? new Date(article.publishedAt).toLocaleDateString()
-                          : "—"}
-                      </span>
+                      <div className="text-sm">
+                        {article.publishedAt ? (
+                          <div>
+                            <span className="text-gray-900 dark:text-white">
+                              {new Date(article.publishedAt).toLocaleDateString("en-GB", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric"
+                              })}
+                            </span>
+                          </div>
+                        ) : article.createdAt ? (
+                          <div>
+                            <span className="text-gray-400 dark:text-gray-500 text-xs">Created</span>
+                            <div className="text-gray-600 dark:text-gray-400">
+                              {new Date(article.createdAt).toLocaleDateString("en-GB", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric"
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         {article.status === "published" && (
                           <a
@@ -614,6 +822,30 @@ export default function ContentDashboardPage() {
                         >
                           <Edit className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                         </Link>
+                        <button
+                          onClick={() => improveArticle(article.slug)}
+                          disabled={improvingSlug === article.slug}
+                          className={`p-2 rounded transition-colors ${
+                            improvingSlug === article.slug
+                              ? "bg-purple-100 dark:bg-purple-900/30"
+                              : "hover:bg-purple-50 dark:hover:bg-purple-900/30"
+                          }`}
+                          title={
+                            (article.grading?.overall_score || article.seoScore || 0) < SEO_THRESHOLD
+                              ? "AI Improve Quality"
+                              : "Re-evaluate & Improve"
+                          }
+                        >
+                          {improvingSlug === article.slug ? (
+                            <RefreshCw className="w-4 h-4 text-purple-500 animate-spin" />
+                          ) : (
+                            <Sparkles className={`w-4 h-4 ${
+                              (article.grading?.overall_score || article.seoScore || 0) < SEO_THRESHOLD
+                                ? "text-amber-500"
+                                : "text-purple-500 dark:text-purple-400"
+                            }`} />
+                          )}
+                        </button>
                         <button
                           onClick={() => deleteArticle(article.slug)}
                           className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
