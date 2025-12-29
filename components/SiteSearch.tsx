@@ -258,21 +258,28 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
       {/* Search Modal */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-20 pb-20 bg-black bg-opacity-50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-16 pb-20 bg-black/70 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-labelledby="search-modal-title"
+          onClick={(e) => e.target === e.currentTarget && closeModal()}
         >
           <div
             ref={modalRef}
-            className="w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden"
+            className="w-full max-w-2xl bg-[#0a192f] border border-white/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden"
             onKeyDown={handleKeyDown}
           >
+            {/* Header with close hint */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
+              <span className="text-xs text-gray-500">JASPER Search</span>
+              <kbd className="px-2 py-0.5 text-[10px] text-gray-500 bg-white/5 rounded border border-white/10">ESC to close</kbd>
+            </div>
+
             {/* Search Input */}
-            <div className="relative border-b border-gray-200">
+            <div className="relative border-b border-white/10">
               <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
                 <svg
-                  className="w-5 h-5 text-jasper-slate"
+                  className="w-5 h-5 text-emerald-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -292,7 +299,7 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
                 value={query}
                 onChange={handleInputChange}
                 placeholder="Search articles..."
-                className="w-full pl-12 pr-4 py-4 text-base text-jasper-navy placeholder-jasper-slate focus:outline-none"
+                className="w-full pl-12 pr-12 py-4 text-base text-white placeholder-gray-500 bg-transparent focus:outline-none"
                 aria-label="Search query"
                 id="search-modal-title"
               />
@@ -303,7 +310,7 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
                     setResults([]);
                     inputRef.current?.focus();
                   }}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-jasper-slate hover:text-jasper-navy transition-colors"
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
                   aria-label="Clear search"
                   type="button"
                 >
@@ -320,8 +327,8 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
               {isLoading && (
                 <div className="flex items-center justify-center py-12">
                   <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-jasper-emerald border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm text-jasper-slate">Searching...</span>
+                    <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-gray-400">Searching...</span>
                   </div>
                 </div>
               )}
@@ -330,7 +337,7 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
               {!isLoading && !query && (
                 <div className="py-12 px-6 text-center">
                   <svg
-                    className="w-12 h-12 mx-auto mb-4 text-jasper-slate-light"
+                    className="w-12 h-12 mx-auto mb-4 text-gray-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -342,7 +349,7 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
                       d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                     />
                   </svg>
-                  <p className="text-sm text-jasper-slate">
+                  <p className="text-sm text-gray-400">
                     Start typing to search articles
                   </p>
                 </div>
@@ -352,7 +359,7 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
               {!isLoading && query && results.length === 0 && (
                 <div className="py-12 px-6 text-center">
                   <svg
-                    className="w-12 h-12 mx-auto mb-4 text-jasper-slate-light"
+                    className="w-12 h-12 mx-auto mb-4 text-gray-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -364,8 +371,8 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
                       d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <p className="text-sm text-jasper-slate">
-                    No articles found for <span className="font-medium text-jasper-navy">'{query}'</span>
+                  <p className="text-sm text-gray-400">
+                    No articles found for <span className="font-medium text-white">'{query}'</span>
                   </p>
                 </div>
               )}
@@ -380,9 +387,9 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
                         handleResultSelect(result.slug);
                         onNavigate?.(`/insights/${result.slug}`);
                       }}
-                      className={`block w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-l-4 ${
+                      className={`block w-full text-left px-4 py-3 hover:bg-white/5 transition-colors border-l-4 ${
                         index === selectedIndex
-                          ? 'border-jasper-emerald bg-emerald-50'
+                          ? 'border-jasper-emerald bg-emerald-500/10'
                           : 'border-transparent'
                       }`}
                     >
@@ -401,22 +408,22 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           {/* Category Badge */}
-                          <span className="inline-block px-2 py-1 mb-2 text-xs font-medium text-jasper-emerald bg-emerald-50 rounded">
+                          <span className="inline-block px-2 py-1 mb-2 text-xs font-medium text-emerald-400 bg-emerald-500/20 rounded">
                             {result.category}
                           </span>
 
                           {/* Title */}
-                          <h3 className="text-sm font-semibold text-jasper-navy mb-1 line-clamp-2">
+                          <h3 className="text-sm font-semibold text-white mb-1 line-clamp-2">
                             {result.title}
                           </h3>
 
                           {/* Excerpt */}
-                          <p className="text-xs text-jasper-slate line-clamp-2 mb-2">
+                          <p className="text-xs text-gray-400 line-clamp-2 mb-2">
                             {result.excerpt}
                           </p>
 
                           {/* Date */}
-                          <p className="text-xs text-jasper-slate-light">
+                          <p className="text-xs text-gray-500">
                             {formatDate(result.published_at)}
                           </p>
                         </div>
@@ -429,20 +436,20 @@ export const SiteSearch: React.FC<SiteSearchProps> = ({ className = '', onNaviga
 
             {/* Footer with keyboard hints */}
             {results.length > 0 && (
-              <div className="border-t border-gray-200 px-4 py-3 bg-gray-50">
-                <div className="flex items-center justify-between text-xs text-jasper-slate">
+              <div className="border-t border-white/10 px-4 py-3 bg-white/5">
+                <div className="flex items-center justify-between text-xs text-gray-400">
                   <div className="flex items-center gap-4">
                     <span className="flex items-center gap-2">
-                      <kbd className="px-2 py-1 bg-white rounded border border-gray-200">↑↓</kbd>
+                      <kbd className="px-2 py-1 bg-white/10 rounded border border-white/10 text-gray-300">↑↓</kbd>
                       Navigate
                     </span>
                     <span className="flex items-center gap-2">
-                      <kbd className="px-2 py-1 bg-white rounded border border-gray-200">Enter</kbd>
+                      <kbd className="px-2 py-1 bg-white/10 rounded border border-white/10 text-gray-300">Enter</kbd>
                       Select
                     </span>
                   </div>
                   <span className="flex items-center gap-2">
-                    <kbd className="px-2 py-1 bg-white rounded border border-gray-200">Esc</kbd>
+                    <kbd className="px-2 py-1 bg-white/10 rounded border border-white/10 text-gray-300">Esc</kbd>
                     Close
                   </span>
                 </div>
