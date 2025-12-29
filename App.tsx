@@ -12,6 +12,10 @@ const NotFoundPage = lazy(() => import('./app/404/page'));
 const LoginPage = lazy(() => import('./app/login/page'));
 const PortalPage = lazy(() => import('./app/portal/page'));
 const SectorPage = lazy(() => import('./components/SectorPage').then(module => ({ default: module.SectorPage })));
+const MarketPage = lazy(() => import('./components/MarketPage').then(module => ({ default: module.MarketPage })));
+const ChinesePage = lazy(() => import('./app/zh/page'));
+const InsightsPage = lazy(() => import('./app/insights/page'));
+const ArticlePage = lazy(() => import('./app/insights/[slug]/page'));
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -33,7 +37,11 @@ type Route =
   | { path: 'terms' }
   | { path: 'login' }
   | { path: 'portal' }
+  | { path: 'zh' }
+  | { path: 'insights' }
+  | { path: 'insights-detail'; slug: string }
   | { path: 'sector-detail'; slug: string }
+  | { path: 'market-detail'; slug: string }
   | { path: '404' };
 
 const App: React.FC = () => {
@@ -61,6 +69,19 @@ const App: React.FC = () => {
       return { path: 'login' };
     } else if (cleanPath === '/portal') {
       return { path: 'portal' };
+    } else if (cleanPath === '/zh') {
+      return { path: 'zh' };
+    } else if (cleanPath === '/insights') {
+      return { path: 'insights' };
+    } else if (cleanPath.startsWith('/insights/')) {
+      const parts = cleanPath.split('/');
+      // Expected format: ["", "insights", "slug"]
+      if (parts.length >= 3) {
+          const slug = parts[2];
+          if (slug && slug.trim() !== '') {
+              return { path: 'insights-detail', slug };
+          }
+      }
     } else if (cleanPath.startsWith('/sectors/')) {
       const parts = cleanPath.split('/');
       // Expected format: ["", "sectors", "slug"]
@@ -68,6 +89,15 @@ const App: React.FC = () => {
           const slug = parts[2];
           if (slug && slug.trim() !== '') {
               return { path: 'sector-detail', slug };
+          }
+      }
+    } else if (cleanPath.startsWith('/markets/')) {
+      const parts = cleanPath.split('/');
+      // Expected format: ["", "markets", "slug"]
+      if (parts.length >= 3) {
+          const slug = parts[2];
+          if (slug && slug.trim() !== '') {
+              return { path: 'market-detail', slug };
           }
       }
     }
@@ -158,12 +188,44 @@ const App: React.FC = () => {
           />
         )}
 
+        {route.path === 'zh' && (
+          <ChinesePage
+              key="zh"
+              onNavigate={navigate}
+          />
+        )}
+
+        {route.path === 'insights' && (
+          <InsightsPage
+              key="insights"
+              onNavigate={navigate}
+          />
+        )}
+
+        {route.path === 'insights-detail' && (
+          <ArticlePage
+            key={`article-${route.slug}`}
+            slug={route.slug}
+            onBack={() => navigate('/insights')}
+            onNavigate={navigate}
+          />
+        )}
+
         {route.path === 'sector-detail' && (
           <SectorPage
             // Use slug as key to force remount/animation when switching between sectors
             key={`sector-${route.slug}`}
             slug={route.slug}
             onBack={() => navigate('/sectors')}
+            onNavigate={navigate}
+          />
+        )}
+
+        {route.path === 'market-detail' && (
+          <MarketPage
+            key={`market-${route.slug}`}
+            slug={route.slug}
+            onBack={() => navigate('/')}
             onNavigate={navigate}
           />
         )}

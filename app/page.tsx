@@ -31,6 +31,16 @@ const Page: React.FC<PageProps> = ({ onNavigate }) => {
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
+  // Check if we should open services (navigated from another page)
+  useEffect(() => {
+    const pkgToOpen = sessionStorage.getItem('openServicesPackage');
+    if (pkgToOpen) {
+      sessionStorage.removeItem('openServicesPackage');
+      setInitialServicePackage(pkgToOpen);
+      setView('services');
+    }
+  }, []);
+
   const openServices = (pkgName?: string) => {
     if (pkgName) setInitialServicePackage(pkgName);
     setView('services');
@@ -47,7 +57,7 @@ const Page: React.FC<PageProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col antialiased selection:bg-brand-emerald selection:text-brand-navy bg-brand-navy text-brand-text">
+    <div className="min-h-screen flex flex-col antialiased selection:bg-brand-emerald selection:text-brand-navy bg-brand-navy text-brand-text overflow-x-hidden w-full">
       <AnimatePresence>
         {view === 'methodology' && (
           <MethodologyViewer onBack={() => setView('home')} onNavigate={onNavigate} />

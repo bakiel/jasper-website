@@ -1,5 +1,5 @@
 
-import { Factory, Landmark, Sprout, Cpu, Zap, Globe, Leaf, HardHat, Ban, Ship, Syringe, Home, Battery, Wind, Sun, Droplets, Anchor, Wifi, Server, Activity } from 'lucide-react';
+import { Factory, Landmark, Sprout, Cpu, Zap, Globe, Leaf, HardHat, Ban, Ship, Syringe, Home, Battery, Wind, Sun, Droplets, Anchor, Wifi, Server, Activity, Building2, Droplet, Heart, Mountain, Warehouse } from 'lucide-react';
 import { Feature, Package, ProcessStep, AddOn, FAQItem } from './types';
 
 // ... (Existing exports remain, adding SECTOR_FULL_CONTENT below)
@@ -10,42 +10,77 @@ export const SECTORS: Feature[] = [
     title: 'Renewable Energy',
     description: 'Solar, wind, biogas, battery storage. PPA modelling, tariff escalation, LCOE analysis.',
     icon: Zap,
-    image: '/images/sectors/renewable-energy.jpg',
+    image: '/images/sectors/renewable-energy.jpg?v=2',
   },
   {
     id: 'data-centres',
     title: 'Data Centres & Digital',
     description: 'Hyperscale facilities, power & cooling economics, heat reuse, uptime guarantees.',
     icon: Cpu,
-    image: '/images/sectors/data-centres.jpg',
+    image: '/images/sectors/data-centres.jpg?v=2',
   },
   {
     id: 'agri-industrial',
     title: 'Agri-Industrial',
     description: 'Food processing, biogas feedstock, value chains. Yield curves, commodity pricing.',
     icon: Sprout,
-    image: '/images/sectors/agri-industrial.jpg',
+    image: '/images/sectors/agri-industrial.jpg?v=2',
   },
   {
     id: 'climate-finance',
     title: 'Climate & Green Finance',
     description: 'Carbon credits, green bonds, adaptation. GCF, SEFA, GEF requirements.',
     icon: Leaf,
-    image: '/images/sectors/climate-finance.jpg',
+    image: '/images/sectors/climate-finance.jpg?v=2',
   },
   {
     id: 'technology',
     title: 'Technology & Platforms',
     description: 'Fintech, AgTech, SaaS, digital marketplaces. Unit economics, ARR/MRR, cohort analysis.',
     icon: Activity,
-    image: '/images/sectors/technology.jpg',
+    image: '/images/sectors/technology.jpg?v=2',
   },
   {
     id: 'manufacturing',
     title: 'Manufacturing & Processing',
     description: 'Food & beverage, FMCG, industrial production. Capacity modelling, BOM integration.',
     icon: Factory,
-    image: '/images/sectors/technology.jpg',
+    image: '/images/sectors/manufacturing.jpg?v=3',
+  },
+  {
+    id: 'infrastructure',
+    title: 'Infrastructure & Transport',
+    description: 'Roads, ports, airports, rail. PPP structures, concession modelling, traffic forecasting.',
+    icon: Warehouse,
+    image: '/images/sectors/infrastructure.jpg?v=2',
+  },
+  {
+    id: 'real-estate',
+    title: 'Real Estate Development',
+    description: 'Commercial, residential, mixed-use. Development phasing, absorption rates, cap rate analysis.',
+    icon: Building2,
+    image: '/images/sectors/real-estate.jpg?v=2',
+  },
+  {
+    id: 'water-sanitation',
+    title: 'Water & Sanitation',
+    description: 'Treatment plants, distribution, desalination. SDG 6 alignment, tariff modelling, NRW analysis.',
+    icon: Droplet,
+    image: '/images/sectors/water-sanitation.jpg?v=2',
+  },
+  {
+    id: 'healthcare',
+    title: 'Healthcare & Life Sciences',
+    description: 'Hospitals, clinics, pharmaceutical manufacturing. Bed capacity, GMP compliance, patient flow.',
+    icon: Heart,
+    image: '/images/sectors/healthcare.jpg?v=2',
+  },
+  {
+    id: 'mining',
+    title: 'Mining & Critical Minerals',
+    description: 'Precious metals, base metals, lithium, rare earths. JORC/NI 43-101, AISC modelling, offtake.',
+    icon: Mountain,
+    image: '/images/sectors/mining.jpg?v=2',
   },
 ];
 
@@ -53,7 +88,7 @@ export const SECTOR_FULL_CONTENT: Record<string, any> = {
     'renewable-energy': {
         title: "Renewable Energy & Power",
         subtitle: "From 1 MW pilots to 1,300 MW integrated complexes.",
-        heroImage: "/images/sectors/renewable-energy.jpg",
+        heroImage: "/images/sectors/renewable-energy.jpg?v=2",
         whatWeModel: [
             {
                 category: "Generation",
@@ -97,7 +132,7 @@ export const SECTOR_FULL_CONTENT: Record<string, any> = {
     'data-centres': {
         title: "Data Centres & Digital Infra",
         subtitle: "Hyperscale economics, cooling physics, and power engineering.",
-        heroImage: "/images/sectors/data-centres.jpg",
+        heroImage: "/images/sectors/data-centres.jpg?v=2",
         whatWeModel: [
             {
                 category: "Facility Types",
@@ -141,7 +176,7 @@ export const SECTOR_FULL_CONTENT: Record<string, any> = {
     'agri-industrial': {
         title: "Agri-Industrial & Food Systems",
         subtitle: "Value chains, processing economics, and food security.",
-        heroImage: "/images/sectors/agri-industrial.jpg",
+        heroImage: "/images/sectors/agri-industrial.jpg?v=2",
         whatWeModel: [
             {
                 category: "Production",
@@ -185,7 +220,7 @@ export const SECTOR_FULL_CONTENT: Record<string, any> = {
     'climate-finance': {
         title: "Climate & Green Finance",
         subtitle: "Carbon credits, bonds, and adaptation.",
-        heroImage: "/images/sectors/climate-finance.jpg",
+        heroImage: "/images/sectors/climate-finance.jpg?v=2",
         whatWeModel: [
             {
                 category: "Mitigation",
@@ -229,7 +264,7 @@ export const SECTOR_FULL_CONTENT: Record<string, any> = {
     'technology': {
         title: "Technology & Digital Platforms",
         subtitle: "Fintech, AgTech, SaaS, and impact tech.",
-        heroImage: "/images/sectors/technology.jpg",
+        heroImage: "/images/sectors/technology.jpg?v=2",
         whatWeModel: [
             {
                 category: "Platform Businesses",
@@ -269,7 +304,7 @@ export const SECTOR_FULL_CONTENT: Record<string, any> = {
     'manufacturing': {
         title: "Manufacturing & Processing",
         subtitle: "Industrial production and value-addition.",
-        heroImage: "/images/sectors/technology.jpg",
+        heroImage: "/images/sectors/technology.jpg?v=2",
         whatWeModel: [
             {
                 category: "Production Types",
@@ -305,6 +340,226 @@ export const SECTOR_FULL_CONTENT: Record<string, any> = {
             ]
         },
         dfis: ["IDC (Industrial Development)", "IFC Manufacturing", "AfDB Industrialisation", "ECIC (Export Credit)"]
+    },
+    'infrastructure': {
+        title: "Infrastructure & Transport",
+        subtitle: "Roads, ports, airports, and rail systems that move economies.",
+        heroImage: "/images/sectors/infrastructure.jpg?v=2",
+        whatWeModel: [
+            {
+                category: "Transport",
+                items: ["Toll roads and highways", "Ports and terminals", "Airports and aviation", "Rail networks", "Urban transit systems"]
+            },
+            {
+                category: "Utilities",
+                items: ["Power transmission", "Gas pipelines", "Telecommunications towers", "Fibre networks", "District heating/cooling"]
+            },
+            {
+                category: "Social",
+                items: ["Hospitals and clinics", "Educational facilities", "Government buildings", "Public housing", "Sports and convention centres"]
+            }
+        ],
+        economics: [
+            {
+                title: "Traffic & Demand",
+                points: ["Traffic growth modelling", "Ramp-up curve analysis", "Demand elasticity", "Competing route impact", "Toll sensitivity testing"]
+            },
+            {
+                title: "Concession Structures",
+                points: ["BOT/BOOT/DBFOM modelling", "Availability payment mechanisms", "Revenue sharing with government", "Hand-back provisions", "Extension triggers"]
+            },
+            {
+                title: "Construction Risk",
+                points: ["EPC contract structures", "Delay and cost overrun scenarios", "Liquidated damages modelling", "Performance bond requirements", "Completion guarantees"]
+            }
+        ],
+        scale: {
+            title: "$2.5B Port Expansion",
+            description: "Multi-terminal development with container, bulk, and liquid handling across 25-year concession.",
+            breakdown: [
+                { val: "$2.5B", label: "Total Investment" },
+                { val: "25 yrs", label: "Concession" },
+                { val: "3", label: "Terminals" },
+                { val: "PPP", label: "Structure" }
+            ]
+        },
+        dfis: ["IFC (Infrastructure)", "AfDB (Programme for Infrastructure Development)", "DBSA", "AIIB", "EBRD", "ADB"]
+    },
+    'real-estate': {
+        title: "Real Estate Development",
+        subtitle: "Commercial, residential, and mixed-use projects at institutional scale.",
+        heroImage: "/images/sectors/real-estate.jpg?v=2",
+        whatWeModel: [
+            {
+                category: "Commercial",
+                items: ["Office developments (Grade A/B/C)", "Retail centres and malls", "Industrial and logistics parks", "Data centre campuses", "Hospitality properties"]
+            },
+            {
+                category: "Residential",
+                items: ["Multi-family developments", "Affordable housing projects", "Student accommodation", "Senior living facilities", "Mixed-income communities"]
+            },
+            {
+                category: "Mixed-Use",
+                items: ["Urban regeneration projects", "Transit-oriented developments", "Master-planned communities", "Industrial conversions", "Heritage adaptive reuse"]
+            }
+        ],
+        economics: [
+            {
+                title: "Development Economics",
+                points: ["Land acquisition and zoning", "Construction cost phasing", "Sales/lease absorption curves", "Pre-sales requirements", "Development margin analysis"]
+            },
+            {
+                title: "Investment Metrics",
+                points: ["Cap rate analysis by property type", "NOI projections", "Yield on cost calculations", "IRR waterfall structures", "Promote and carried interest"]
+            },
+            {
+                title: "Financing Structures",
+                points: ["Construction loan drawdown", "Mezzanine debt tranches", "Equity co-investment", "JV waterfall structures", "Refinancing scenarios"]
+            }
+        ],
+        scale: {
+            title: "$450M Mixed-Use Development",
+            description: "Urban regeneration project combining residential, office, retail, and public amenity across multiple phases.",
+            breakdown: [
+                { val: "$450M", label: "GDV" },
+                { val: "4", label: "Phases" },
+                { val: "Mixed", label: "Use Type" },
+                { val: "7.2%", label: "Target Yield" }
+            ]
+        },
+        dfis: ["IFC (Real Estate)", "OPIC/DFC", "AfDB", "CDC/BII", "FMO", "DBSA"]
+    },
+    'water-sanitation': {
+        title: "Water & Sanitation Infrastructure",
+        subtitle: "SDG 6 alignment: Clean water and sanitation for all.",
+        heroImage: "/images/sectors/water-sanitation.jpg?v=2",
+        whatWeModel: [
+            {
+                category: "Water Supply",
+                items: ["Municipal water systems", "Bulk water supply", "Desalination plants", "Groundwater extraction", "Water treatment facilities"]
+            },
+            {
+                category: "Wastewater",
+                items: ["Sewage treatment plants", "Industrial effluent treatment", "Sludge processing", "Water reuse systems", "Constructed wetlands"]
+            },
+            {
+                category: "Distribution",
+                items: ["Transmission pipelines", "Distribution networks", "Storage reservoirs", "Pumping stations", "Smart metering systems"]
+            }
+        ],
+        economics: [
+            {
+                title: "Tariff Modelling",
+                points: ["Volumetric tariff structures", "Connection fee modelling", "Industrial vs residential rates", "Affordability analysis", "Tariff escalation mechanisms"]
+            },
+            {
+                title: "Efficiency Metrics",
+                points: ["Non-revenue water (NRW) reduction", "System loss modelling", "Energy cost per m³", "Chemical consumption", "Maintenance cost curves"]
+            },
+            {
+                title: "Demand Forecasting",
+                points: ["Population growth projections", "Per capita consumption trends", "Industrial demand forecasting", "Climate impact on demand", "Seasonal variation modelling"]
+            }
+        ],
+        scale: {
+            title: "500 MLD Treatment Plant",
+            description: "Municipal water treatment facility serving 2.5 million people with 25-year O&M concession.",
+            breakdown: [
+                { val: "500", label: "MLD Capacity" },
+                { val: "2.5M", label: "Population" },
+                { val: "25 yrs", label: "Concession" },
+                { val: "SDG 6", label: "Aligned" }
+            ]
+        },
+        dfis: ["World Bank (Water GP)", "AfDB (WASH)", "ADB (Water)", "IFC", "EIB", "DBSA"]
+    },
+    'healthcare': {
+        title: "Healthcare & Life Sciences",
+        subtitle: "Hospitals, clinics, and pharmaceutical manufacturing.",
+        heroImage: "/images/sectors/healthcare.jpg?v=2",
+        whatWeModel: [
+            {
+                category: "Healthcare Facilities",
+                items: ["Tertiary hospitals", "Specialist centres", "Primary care clinics", "Diagnostic centres", "Rehabilitation facilities"]
+            },
+            {
+                category: "Pharmaceutical",
+                items: ["API manufacturing", "Formulation facilities", "Vaccine production", "Medical device manufacturing", "Biotech facilities"]
+            },
+            {
+                category: "Support Services",
+                items: ["Laboratory networks", "Blood banks", "Medical waste treatment", "Healthcare logistics", "Telemedicine platforms"]
+            }
+        ],
+        economics: [
+            {
+                title: "Hospital Economics",
+                points: ["Bed occupancy modelling", "Case mix analysis", "ALOS (Average Length of Stay)", "Revenue per bed day", "Outpatient conversion rates"]
+            },
+            {
+                title: "Pharmaceutical Manufacturing",
+                points: ["Batch vs continuous production", "GMP compliance costs", "WHO-PQ certification", "Capacity utilisation", "API sourcing economics"]
+            },
+            {
+                title: "Regulatory & Compliance",
+                points: ["Licensing timeline modelling", "Quality assurance costs", "Product registration", "Clinical trial economics", "Patent lifecycle"]
+            }
+        ],
+        scale: {
+            title: "400-Bed Tertiary Hospital",
+            description: "Full-service hospital with emergency, surgery, maternity, and specialist departments.",
+            breakdown: [
+                { val: "400", label: "Beds" },
+                { val: "85%", label: "Target Occupancy" },
+                { val: "12", label: "Specialties" },
+                { val: "SDG 3", label: "Aligned" }
+            ]
+        },
+        dfis: ["IFC (Health)", "AfDB", "GAVI", "Global Fund", "CDC/BII", "DFC"]
+    },
+    'mining': {
+        title: "Mining & Critical Minerals",
+        subtitle: "Precious metals, base metals, and energy transition minerals.",
+        heroImage: "/images/sectors/mining.jpg?v=2",
+        whatWeModel: [
+            {
+                category: "Precious Metals",
+                items: ["Gold mining operations", "PGM (Platinum Group Metals)", "Silver production", "Diamond mining", "Artisanal and small-scale integration"]
+            },
+            {
+                category: "Base Metals",
+                items: ["Copper mining and processing", "Zinc and lead operations", "Nickel production", "Iron ore", "Manganese"]
+            },
+            {
+                category: "Critical Minerals",
+                items: ["Lithium extraction and processing", "Cobalt production", "Rare earth elements", "Graphite", "Vanadium"]
+            }
+        ],
+        economics: [
+            {
+                title: "Production Economics",
+                points: ["AISC (All-In Sustaining Cost)", "Life of Mine (LOM) modelling", "Grade and recovery curves", "Stripping ratio analysis", "Sustaining vs growth capex"]
+            },
+            {
+                title: "Resource Valuation",
+                points: ["JORC/NI 43-101/SAMREC reporting", "Mineral reserve estimation", "Resource to reserve conversion", "Geological confidence factors", "Exploration upside modelling"]
+            },
+            {
+                title: "Offtake & Financing",
+                points: ["Streaming and royalty structures", "Prepayment facilities", "Metal price hedging", "Concentrate offtake agreements", "Export logistics modelling"]
+            }
+        ],
+        scale: {
+            title: "250,000 oz/year Gold Mine",
+            description: "Open-pit and underground operation with 12-year mine life and processing facility.",
+            breakdown: [
+                { val: "250K oz", label: "Annual Production" },
+                { val: "12 yrs", label: "Mine Life" },
+                { val: "$950", label: "AISC/oz" },
+                { val: "JORC", label: "Compliant" }
+            ]
+        },
+        dfis: ["IFC (Mining)", "AfDB", "DFC", "EBRD", "Wheaton Precious Metals", "IDC"]
     }
 };
 
@@ -467,112 +722,259 @@ export const SECTOR_DETAILS = [
 ];
 
 export const ANTI_PORTFOLIO = [
-    { title: 'Real Estate', desc: 'Residential/Commercial', icon: Home },
-    { title: 'Mining', desc: 'Extractive Industries', icon: HardHat },
-    { title: 'Oil & Gas', desc: 'Fossil Exploration', icon: Factory },
+    { title: 'Oil & Gas', desc: 'Fossil Fuel Exploration', icon: Factory },
     { title: 'Shipping', desc: 'Maritime Logistics', icon: Ship },
-    { title: 'Healthcare', desc: 'Hospitals/Clinics', icon: Syringe },
     { title: 'Gambling', desc: 'Casinos/Betting', icon: Ban },
+    { title: 'Weapons', desc: 'Arms Manufacturing', icon: Ban },
+    { title: 'Tobacco', desc: 'Tobacco Products', icon: Ban },
 ];
+
+// Market-specific content for regional landing pages
+export const MARKET_CONTENT: Record<string, any> = {
+    'usa': {
+        title: "United States Market",
+        subtitle: "DFI-grade financial models for US-based investors and developers",
+        heroImage: "/images/markets/usa.jpg",
+        currency: "USD",
+        keyDFIs: ["DFC (US International Development Finance Corporation)", "OPIC Legacy Projects", "USAID", "MCC (Millennium Challenge Corporation)"],
+        focusSectors: ["Renewable Energy", "Infrastructure", "Healthcare", "Technology"],
+        localContext: [
+            {
+                title: "DFC Alignment",
+                points: ["Development impact metrics", "US foreign policy alignment", "OPIC transition expertise", "Additionality demonstration"]
+            },
+            {
+                title: "Investment Standards",
+                points: ["GAAP-compliant financials", "SEC disclosure requirements", "CFIUS considerations", "ESG integration"]
+            },
+            {
+                title: "Co-Investment",
+                points: ["US investor consortium structures", "Family office participation", "Institutional LP requirements", "Impact investor metrics"]
+            }
+        ],
+        pricing: {
+            growth: { price: "$12,000", description: "Growth - 3-4 weeks" },
+            institutional: { price: "$25,000", description: "Institutional - 4-6 weeks" },
+            infrastructure: { price: "$45,000", description: "Infrastructure - 6-8 weeks" },
+            strategic: { price: "$85,000+", description: "Strategic - 8-12 weeks" }
+        },
+        whatsappMessage: "Hello JASPER, I'm interested in financial modelling services for a project targeting US DFI funding. Please share details about your packages.",
+        stats: [
+            { val: "$60B+", label: "DFC Portfolio" },
+            { val: "100+", label: "Countries Served" },
+            { val: "USD", label: "Primary Currency" },
+            { val: "GAAP", label: "Standards" }
+        ]
+    },
+    'uk-eu': {
+        title: "United Kingdom & European Union",
+        subtitle: "Financial architecture for UK and European development finance",
+        heroImage: "/images/markets/uk-eu.jpg",
+        currency: "GBP/EUR",
+        keyDFIs: ["British International Investment (BII/CDC)", "FMO (Netherlands)", "DEG (Germany)", "Proparco (France)", "EIB", "EBRD"],
+        focusSectors: ["Climate Finance", "Renewable Energy", "Infrastructure", "Agribusiness"],
+        localContext: [
+            {
+                title: "European DFI Standards",
+                points: ["EDFI harmonised metrics", "EU Taxonomy alignment", "SFDR compliance", "2X Challenge integration"]
+            },
+            {
+                title: "Climate Focus",
+                points: ["Paris Agreement alignment", "Net-zero pathways", "Just transition financing", "Nature-based solutions"]
+            },
+            {
+                title: "Blended Finance",
+                points: ["First-loss capital structures", "Guarantee mechanisms", "Technical assistance facilities", "Catalytic capital"]
+            }
+        ],
+        pricing: {
+            growth: { price: "€11,000", description: "Growth - 3-4 weeks" },
+            institutional: { price: "€23,000", description: "Institutional - 4-6 weeks" },
+            infrastructure: { price: "€41,000", description: "Infrastructure - 6-8 weeks" },
+            strategic: { price: "€78,000+", description: "Strategic - 8-12 weeks" }
+        },
+        whatsappMessage: "Hello JASPER, I'm exploring financial modelling services for a project seeking European DFI funding. Please provide details on your approach.",
+        stats: [
+            { val: "€50B+", label: "EDFI Combined" },
+            { val: "15+", label: "European DFIs" },
+            { val: "IFRS", label: "Standards" },
+            { val: "EU Tax", label: "Aligned" }
+        ]
+    },
+    'china': {
+        title: "China & Chinese Investment",
+        subtitle: "Financial models for Chinese DFIs and Belt & Road Initiative projects",
+        heroImage: "/images/markets/china.jpg",
+        currency: "USD/CNY",
+        keyDFIs: ["China Development Bank (CDB)", "Export-Import Bank of China", "AIIB (Asian Infrastructure Investment Bank)", "Silk Road Fund", "CADFund"],
+        focusSectors: ["Infrastructure", "Renewable Energy", "Mining", "Manufacturing"],
+        localContext: [
+            {
+                title: "Chinese DFI Requirements",
+                points: ["Policy bank submission formats", "State Council alignment", "Provincial guarantee structures", "SOE partnership models"]
+            },
+            {
+                title: "BRI Integration",
+                points: ["Belt and Road corridor alignment", "Green BRI standards", "Debt sustainability frameworks", "Local content requirements"]
+            },
+            {
+                title: "Currency & Finance",
+                points: ["RMB/USD dual currency modelling", "CHIBOR/SHIBOR reference rates", "Cross-border settlement", "Export credit insurance (Sinosure)"]
+            }
+        ],
+        pricing: {
+            growth: { price: "$12,000", description: "Growth - 3-4 weeks" },
+            institutional: { price: "$25,000", description: "Institutional - 4-6 weeks" },
+            infrastructure: { price: "$45,000", description: "Infrastructure - 6-8 weeks" },
+            strategic: { price: "$85,000+", description: "Strategic - 8-12 weeks" }
+        },
+        whatsappMessage: "Hello JASPER, I'm interested in financial modelling for a project involving Chinese development finance. Please share your capabilities.",
+        stats: [
+            { val: "$500B+", label: "CDB Assets" },
+            { val: "140+", label: "BRI Countries" },
+            { val: "CNY/USD", label: "Dual Currency" },
+            { val: "AIIB", label: "Partner" }
+        ]
+    }
+};
 
 export const PACKAGES: Package[] = [
   {
     name: "Growth",
     price: "$12,000 USD",
     duration: "3-4 weeks",
-    target: "For projects seeking $5M-$15M",
+    target: "Projects seeking $5M-$15M in funding",
     features: [
       "20-sheet JASPER model",
       "3 scenarios (base, upside, downside)",
       "Executive summary document",
       "Investment memorandum",
       "Model documentation",
-      "30-day email support"
+      "30-day email support",
+      "1 revision round"
     ],
     bestFor: [
-      "First-time DFI applicants",
-      "Straightforward business models",
-      "Single primary revenue stream"
+      "Early-stage project funding",
+      "Initial DFI discussions",
+      "Seed capital raises",
+      "Pre-feasibility analysis"
     ],
     deliverables: {
-      model: ["20-sheet JASPER architecture", "3 scenarios", "5-year projections", "Print-ready formatting"],
-      docs: ["Executive summary (5-7 pages)", "Investment memorandum (10-12 pages)", "Assumption book"],
-      support: ["2 revision rounds", "30-day email support"]
+      model: ["20-sheet JASPER architecture", "3 scenarios", "IRR/NPV/DSCR analysis", "Print-ready formatting"],
+      docs: ["Executive summary", "Investment memorandum", "Model documentation"],
+      support: ["30-day email support", "1 revision round"]
     },
-    notIncluded: ["Full business plan", "DFI-specific reformatting", "Construction period modelling"]
+    notIncluded: ["Professional business plan", "DFI-specific formatting", "IC presentation deck"]
   },
   {
     name: "Institutional",
     price: "$25,000 USD",
     duration: "4-6 weeks",
-    target: "For projects seeking $15M-$75M",
+    target: "Projects seeking $15M-$75M in funding",
     highlight: true,
     features: [
-      "Full 28-sheet JASPER model",
+      "28-sheet investment-grade model",
       "5 scenarios with sensitivity analysis",
       "Professional business plan (designed)",
       "Debt sculpting & DSCR optimization",
       "DFI-specific formatting (1 institution)",
-      "60-day email support"
+      "60-day email support",
+      "2 revision rounds"
     ],
     bestFor: [
-      "Mid-market projects ($15M-$75M)",
-      "Multiple funding sources",
-      "Complex capital structures",
-      "DFI-specific submission requirements"
+      "DFI funding applications",
+      "Investment committee presentations",
+      "Series A/B capital raises",
+      "Standard project financing"
     ],
     deliverables: {
-      model: ["Full 28-sheet architecture", "5 scenarios + sensitivity", "7-10 year projections", "Debt sculpting & DSCR optimization", "Three-statement integration"],
-      docs: ["Business Plan (40-60 pages)", "Executive summary (7-10 pages)", "Investment memo (15-20 pages)"],
-      support: ["2 revision rounds", "60-day email support"],
-      other: ["1 institution-specific version", "Metrics aligned to DFI requirements"]
+      model: ["28-sheet JASPER architecture", "5 scenarios", "Sensitivity analysis", "Debt sculpting & DSCR optimization"],
+      docs: ["Professional business plan (designed)", "Assumption book (comprehensive)", "Executive summary"],
+      support: ["60-day email support", "2 revision rounds"]
     }
   },
   {
     name: "Infrastructure",
     price: "$45,000 USD",
     duration: "6-8 weeks",
-    target: "For projects seeking $75M+",
+    target: "Projects seeking $75M-$150M in funding",
     features: [
       "35+ sheet comprehensive model",
-      "7+ scenarios with Monte Carlo",
+      "7+ scenarios with Monte Carlo simulation",
       "Complete business plan + appendices",
       "Multiple DFI versions (up to 4)",
       "Construction period modelling",
       "Infographics & visual package",
-      "90-day email support"
+      "IC presentation deck",
+      "Data room guidance",
+      "90-day email support",
+      "3 revision rounds"
     ],
     bestFor: [
-      "Large-scale projects ($75M+)",
-      "PPP and concession structures",
-      "Multi-phase construction",
-      "Multiple DFI submissions"
+      "Major DFI submissions (IFC, AfDB, ADB)",
+      "Complex capital structures",
+      "Multi-stakeholder projects",
+      "Large infrastructure deals"
     ],
     deliverables: {
-      model: ["35+ sheet comprehensive model", "7+ scenarios with Monte Carlo", "10-15 year projections", "Construction period modelling", "Multi-currency support"],
-      docs: ["Business Plan (80-120 pages)", "Technical appendices", "Custom infographics package"],
-      support: ["3 revision rounds", "90-day email support", "Quarterly model update (1 included)"],
-      other: ["Up to 4 DFI versions", "Custom cover letters", "Submission checklists"]
+      model: ["35+ sheet comprehensive model", "7+ scenarios with Monte Carlo", "Construction period modelling", "Debt sculpting & DSCR optimization"],
+      docs: ["Complete business plan + appendices", "IC presentation deck", "Infographics & visual package", "Data room guidance"],
+      support: ["90-day email support", "3 revision rounds"],
+      other: ["Multiple DFI versions (up to 4)", "DFI-aligned metrics"]
+    }
+  },
+  {
+    name: "Strategic",
+    price: "$85,000+ USD",
+    duration: "8-12 weeks",
+    target: "Projects seeking $150M+ or multi-asset portfolios",
+    features: [
+      "Custom model scope",
+      "Multi-asset/multi-entity structures",
+      "M&A modelling capabilities",
+      "Portfolio-level analysis",
+      "Dedicated project manager",
+      "Unlimited DFI versions",
+      "120-day support",
+      "Unlimited revisions within scope"
+    ],
+    bestFor: [
+      "Multi-asset portfolios",
+      "M&A transactions",
+      "Complex holding structures",
+      "Enterprise-level requirements"
+    ],
+    deliverables: {
+      model: ["Custom sheet count", "Multi-entity integration", "Portfolio analysis", "M&A valuation if required"],
+      docs: ["Full custom documentation", "Board-ready presentations", "Due diligence support pack"],
+      support: ["Dedicated project manager", "120-day support", "Unlimited revisions within scope"],
+      other: ["Custom deliverables as agreed"]
     }
   }
 ];
 
 export const ADDONS: AddOn[] = [
-  { title: "Additional DFI Version", price: "$3,500", desc: "Extra institution-specific formatting beyond package inclusion" },
-  { title: "Market Study Integration", price: "$5,000", desc: "Incorporate third-party market research into model assumptions" },
-  { title: "Implementation Plan", price: "$4,000", desc: "Detailed operational rollout document with milestones and KPIs" },
-  { title: "Pitch Deck", price: "$3,000", desc: "20-25 slide investor presentation matching business plan design" },
-  { title: "Quarterly Model Update", price: "$2,500", desc: "Refresh projections with actual data and updated assumptions" },
+  { title: "IC Presentation Deck", price: "$5,000", desc: "Standalone investment committee presentation deck" },
+  { title: "Model Update", price: "$3,000", desc: "Post-DFI feedback model revision and update" },
+  { title: "Sensitivity Dashboard", price: "$4,000", desc: "Interactive sensitivity analysis dashboard" },
+  { title: "Chinese Translation", price: "$2,000", desc: "Full Mandarin translation for Chinese DFI submissions" },
+  { title: "Additional DFI Format", price: "$2,500", desc: "Additional DFI-specific formatting beyond included versions" },
+  { title: "Rush Delivery", price: "+30%", desc: "Expedited delivery across all tiers" },
 ];
 
 export const SERVICE_FAQS: FAQItem[] = [
-    { q: "Can I start with Growth and upgrade later?", a: "Yes. We can expand a Growth model to Institutional scope. You pay the difference plus a $2,000 restructuring fee." },
-    { q: "What if I need changes after delivery?", a: "2-3 revision rounds are included depending on package. Additional revisions billed at $150/hour." },
-    { q: "How do I know which package I need?", a: "Generally: Under $15M funding → Growth. $15M-$75M funding → Institutional. Over $75M or PPP → Infrastructure. Email us if unsure. We'll recommend honestly." },
-    { q: "Can you work faster than stated timelines?", a: "Timelines assume normal workflow. Rush delivery is not available. Quality requires time." },
+    { q: "Can I start with Growth and upgrade later?", a: "Yes. We can expand a Growth model to Institutional or Infrastructure scope. You pay the difference plus a $2,000 restructuring fee." },
+    { q: "What if I need changes after delivery?", a: "Growth includes 1 revision round with 30-day support. Institutional includes 2 rounds with 60-day support. Infrastructure includes 3 rounds with 90-day support. Strategic includes unlimited revisions with 120-day support." },
+    { q: "How do I know which package I need?", a: "Growth for $5M-$15M deals. Institutional for $15M-$75M deals with full DFI formatting. Infrastructure for $75M-$150M deals requiring IC presentations. Strategic for $150M+ or multi-entity structures." },
+    { q: "Can you work faster than stated timelines?", a: "Yes. Rush delivery is available at +30% premium across all tiers." },
+    { q: "What payment methods do you accept?", a: "We accept cryptocurrency (USDT TRC-20, USDC ERC-20, Bitcoin) with a 3% discount, international wire transfer (SWIFT to FNB South Africa), PayPal, and SA bank transfer (EFT). 50% upfront to commence, 50% on delivery." },
     { q: "Do you sign NDAs?", a: "Yes. We sign reasonable NDAs before receiving confidential project information." },
-    { q: "What happens if I'm not satisfied?", a: "Revision rounds address most concerns. If fundamental issues exist, we work to resolve them. Refunds are not provided for completed work meeting specifications." },
+    { q: "Where do your cost assumptions come from?", a: "We use market-based parametric estimates, analogous project data, and our pricing database. Every assumption is documented with source and date. This is standard for pre-feasibility and feasibility stage work." },
     { q: "Can I see a sample model?", a: "We can share anonymised structural samples showing sheet architecture. Full models contain client confidential information." },
+    { q: "Why is JASPER more expensive than freelancers?", a: "Freelancers typically deliver 10-15 sheet general models. JASPER delivers 25-50+ sheet DFI-specific architectures with institutional formatting, sensitivity dashboards, and IC-ready documentation. Our models have secured funding from IFC, DBSA, IDC, and other major DFIs." },
+    { q: "How does JASPER compare to Big 4 consulting?", a: "Big 4 firms charge $327-$1,193 per hour for financial modelling. A comparable model would cost $80,000-$200,000+ and take 3-6 months. JASPER delivers equivalent rigour at 60-85% lower cost in 3-12 weeks fixed-price." },
+    { q: "Isn't this expensive for a financial model?", a: "Perspective matters: Our fees represent 0.03%-0.24% of the funding you're seeking. A $25,000 investment to unlock $50M in infrastructure finance is a 2,000x potential return. The question isn't whether you can afford quality modelling—it's whether you can afford not to have it." },
+    { q: "Can't I just use a template?", a: "DFI investment committees review thousands of applications. Template-based submissions signal lack of serious preparation. Our models are built specifically for each DFI's evaluation criteria and demonstrate the rigorous analysis that distinguishes fundable projects from rejected ones." },
 ];
 
 export const PROCESS_STEPS: ProcessStep[] = [
@@ -600,4 +1002,55 @@ export const FIT_CRITERIA = {
     "Template-acceptable applications",
     "Projects without basic feasibility data"
   ]
+};
+
+// Value-based anchoring: Fee as percentage of deal size
+export const VALUE_ANCHORING = [
+  { tier: "Growth", dealSize: "$5M-$15M", fee: "$12,000", percentage: "0.08%-0.24%", potentialReturn: "417x-1,250x" },
+  { tier: "Institutional", dealSize: "$15M-$75M", fee: "$25,000", percentage: "0.03%-0.17%", potentialReturn: "600x-3,000x" },
+  { tier: "Infrastructure", dealSize: "$75M-$150M", fee: "$45,000", percentage: "0.03%-0.06%", potentialReturn: "1,667x-3,333x" },
+  { tier: "Strategic", dealSize: "$150M+", fee: "$85,000+", percentage: "<0.06%", potentialReturn: "1,765x+" },
+];
+
+// Competitive comparison data
+export const COMPETITIVE_COMPARISON = {
+  big4: {
+    name: "Big 4 Consulting",
+    hourlyRate: "$327-$1,193/hr",
+    projectCost: "$80,000-$200,000+",
+    timeline: "3-6 months",
+    dfiExpertise: "General",
+    fixedPrice: false,
+  },
+  boutique: {
+    name: "Boutique Advisory",
+    hourlyRate: "$250-$500/hr",
+    projectCost: "$40,000-$100,000",
+    timeline: "2-4 months",
+    dfiExpertise: "Variable",
+    fixedPrice: false,
+  },
+  freelancer: {
+    name: "Freelancers",
+    hourlyRate: "$50-$150/hr",
+    projectCost: "$3,000-$15,000",
+    timeline: "2-4 weeks",
+    dfiExpertise: "Limited",
+    fixedPrice: true,
+    limitations: "10-15 sheet models, no DFI formatting, limited sensitivity analysis"
+  },
+  jasper: {
+    name: "JASPER",
+    fee: "$12,000-$85,000+",
+    timeline: "3-12 weeks",
+    dfiExpertise: "Specialist",
+    fixedPrice: true,
+    differentiators: [
+      "25-50+ sheet DFI-specific architecture",
+      "Institutional-grade formatting",
+      "Multi-scenario sensitivity dashboards",
+      "IC presentation-ready documentation",
+      "Fixed price, no hourly creep"
+    ]
+  }
 };

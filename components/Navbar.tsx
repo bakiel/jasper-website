@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ArrowRight, ChevronDown, Zap, Sprout, Landmark, Cpu, Factory, Leaf } from 'lucide-react';
+import { Menu, X, ArrowRight, ChevronDown, Zap, Sprout, Landmark, Cpu, Factory, Leaf, BookOpen, Mail, User } from 'lucide-react';
 import { Button } from './Button';
 
 interface NavbarProps {
@@ -22,29 +22,40 @@ export const Navbar: React.FC<NavbarProps> = ({ onLaunchMethodology, onOpenServi
   const MENU_ITEMS = [
     {
       label: 'Services',
-      href: '/#pricing',
+      href: '/#services',
       type: 'megamenu',
       children: [
         {
           label: 'Growth',
-          desc: 'For raising $5M - $15M',
-          href: '/#pricing',
+          desc: '$12K · 3-4 weeks · $5M-$15M deals',
+          href: '/#services',
+          onClick: 'openServices-Growth',
           icon: Zap,
           color: 'text-yellow-400'
         },
         {
           label: 'Institutional',
-          desc: 'For raising $15M - $75M',
-          href: '/#pricing',
+          desc: '$25K · 4-6 weeks · $15M-$75M deals',
+          href: '/#services',
+          onClick: 'openServices-Institutional',
           icon: Landmark,
           color: 'text-brand-emerald'
         },
         {
           label: 'Infrastructure',
-          desc: 'For raising $75M+',
-          href: '/#pricing',
+          desc: '$45K · 6-8 weeks · $75M-$150M deals',
+          href: '/#services',
+          onClick: 'openServices-Infrastructure',
           icon: Factory,
           color: 'text-blue-400'
+        },
+        {
+          label: 'Strategic',
+          desc: '$85K+ · 8-12 weeks · $150M+ portfolios',
+          href: '/#services',
+          onClick: 'openServices-Strategic',
+          icon: Landmark,
+          color: 'text-purple-400'
         },
       ]
     },
@@ -65,15 +76,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onLaunchMethodology, onOpenServi
         { label: 'Climate Finance', href: '/sectors/climate-finance', icon: Leaf },
       ]
     },
-    { 
-      label: 'Process', 
+    {
+      label: 'Process',
       href: '/process',
       type: 'link'
     },
     {
-      label: 'Contact',
-      href: '/contact',
-      type: 'link'
+      label: 'Resources',
+      href: '#',
+      type: 'dropdown',
+      children: [
+        { label: 'Insights', desc: 'DFI funding articles & guides', href: '/insights', icon: BookOpen },
+        { label: 'Contact', desc: 'Get in touch with our team', href: '/contact', icon: Mail },
+      ]
     },
   ];
 
@@ -101,9 +116,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onLaunchMethodology, onOpenServi
             onLaunchMethodology();
         } else if (item.onClick === 'openServices' && onOpenServices) {
             onOpenServices();
-        } else if (item.onClick.startsWith('openServices-') && onOpenServices) {
+        } else if (item.onClick.startsWith('openServices-')) {
             const pkgName = item.onClick.split('-')[1];
-            onOpenServices(pkgName);
+            if (onOpenServices) {
+                // On home page - open services directly
+                onOpenServices(pkgName);
+            } else if (onNavigate) {
+                // On other pages - navigate home with query param to open services
+                sessionStorage.setItem('openServicesPackage', pkgName);
+                onNavigate('/');
+            }
         }
     } else if (item.href) {
        // Handle /#section links (navigate to home then scroll)
@@ -140,14 +162,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onLaunchMethodology, onOpenServi
         <motion.nav
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 1.0, type: "spring", stiffness: 50, damping: 20 }}
+          transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
           className={`
             pointer-events-auto
             flex items-center justify-between
-            transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]
-            ${isScrolled 
-              ? 'px-6 py-3 md:px-8 md:py-3 rounded-full bg-[#050A14]/70 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] w-full max-w-[920px]' 
-              : 'px-6 py-4 md:px-8 md:py-5 rounded-full bg-transparent border border-transparent w-full max-w-7xl'
+            transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]
+            ${isScrolled
+              ? 'px-5 py-3 md:px-8 md:py-3 rounded-full bg-[#050A14]/70 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] w-fit'
+              : 'px-6 py-4 md:px-12 md:py-5 rounded-full bg-transparent border border-transparent w-full max-w-7xl'
             }
           `}
           onMouseLeave={() => setActiveDropdown(null)}
@@ -206,7 +228,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLaunchMethodology, onOpenServi
                                 animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
                                 exit={{ opacity: 0, y: 15, scale: 0.95, filter: 'blur(8px)' }}
                                 transition={{ duration: 0.2, ease: "easeOut" }}
-                                className="absolute top-[calc(100%+12px)] left-1/2 -translate-x-1/2 min-w-[260px] bg-[#0A0F1C]/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)] overflow-hidden z-50 p-2"
+                                className="absolute top-[calc(100%+12px)] left-0 min-w-[260px] bg-[#0A0F1C]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)] z-[100] p-2"
                             >
                                 <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-brand-emerald/40 to-transparent" />
                                 
@@ -242,14 +264,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onLaunchMethodology, onOpenServi
             </div>
 
             {/* Desktop Actions */}
-            <div className="hidden md:flex items-center gap-4 lg:gap-6 relative z-10 ml-auto lg:ml-8">
-              <a href="/login" className="hidden lg:block text-[10px] font-bold text-gray-400 hover:text-white transition-colors tracking-widest uppercase hover:drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
-                Login
+            <div className="hidden md:flex items-center gap-3 lg:gap-4 relative z-10 ml-auto lg:ml-6 shrink-0">
+              <a
+                href="/login"
+                className="hidden lg:flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all group relative"
+                title="Client Login"
+              >
+                <User className="w-4 h-4" />
+                {/* Tooltip */}
+                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-[9px] text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  Client Login
+                </span>
               </a>
-              <Button 
-                className={`!py-2 !px-5 !text-[11px] !font-bold !tracking-widest !rounded-full transition-all duration-300
-                  ${isScrolled 
-                    ? '!bg-brand-emerald text-white shadow-[0_0_20px_rgba(44,138,91,0.5)] hover:shadow-[0_0_30px_rgba(68,214,133,0.6)] border border-brand-emerald/50' 
+              <Button
+                className={`!py-2 !px-5 !text-[11px] !font-bold !tracking-widest !rounded-full transition-all duration-300 whitespace-nowrap
+                  ${isScrolled
+                    ? '!bg-brand-emerald text-white shadow-[0_0_20px_rgba(44,138,91,0.5)] hover:shadow-[0_0_30px_rgba(68,214,133,0.6)] border border-brand-emerald/50'
                     : 'bg-white/5 border border-white/10 hover:bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]'
                   }
                 `}
