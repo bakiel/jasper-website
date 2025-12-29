@@ -1,10 +1,9 @@
 
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ArrowRight, ChevronDown, Zap, Sprout, Landmark, Cpu, Factory, Leaf, BookOpen, Mail, User } from 'lucide-react';
+import { Menu, X, ArrowRight, ChevronDown, Zap, Sprout, Landmark, Cpu, Factory, Leaf, BookOpen, Mail, User, Search } from 'lucide-react';
 import { Button } from './Button';
+import { SiteSearch } from './SiteSearch';
 
 interface NavbarProps {
   onLaunchMethodology?: () => void;
@@ -265,6 +264,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLaunchMethodology, onOpenServi
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-3 lg:gap-4 relative z-10 ml-auto lg:ml-6 shrink-0">
+              {/* Search Button */}
+              <SiteSearch onNavigate={onNavigate} className="hidden lg:flex" />
+
               <a
                 href="/login"
                 className="hidden lg:flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all group relative"

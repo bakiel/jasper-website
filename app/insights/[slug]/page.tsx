@@ -1,8 +1,7 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '../../../components/Navbar';
 import { Footer } from '../../../components/Footer';
+import { EmailCapturePopup } from '../../../components/EmailCapturePopup';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -789,6 +788,13 @@ const ArticlePage: React.FC<ArticlePageProps> = ({ slug, onBack, onNavigate }) =
           </div>
         </section>
       </main>
+
+      {/* Email Capture Popup - appears at 60% scroll */}
+      <EmailCapturePopup
+        category={post?.category === 'DFI Insights' ? 'dfi-insights' :
+                  post?.category === 'Climate Finance' ? 'climate-finance' : 'default'}
+        scrollThreshold={60}
+      />
 
       <Footer />
     </div>
