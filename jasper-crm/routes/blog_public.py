@@ -24,7 +24,28 @@ async def search_posts(
     Returns posts matching the query in title, excerpt, content, or tags.
     Results are sorted by relevance.
     """
-    return blog_service.search_posts(query=q, limit=limit)
+    results = blog_service.search_posts(query=q, limit=limit)
+
+    # Transform to match frontend BlogPost interface
+    return [
+        {
+            "slug": r.get("slug"),
+            "title": r.get("title"),
+            "excerpt": r.get("excerpt", "")[:200],
+            "category": r.get("category"),
+            "heroImage": r.get("hero_image"),  # search returns snake_case
+            "publishedAt": r.get("published_at"),
+            "author": {
+                "name": "JASPER Research Team",
+                "role": "Research Team",
+                "avatar": None
+            },
+            "tags": [],
+            "readTime": 5,
+            "status": "published"
+        }
+        for r in results
+    ]
 
 
 @router.get("/posts", response_model=List[Dict[str, Any]])
@@ -45,17 +66,26 @@ async def list_published_posts(
         offset=offset
     )
 
-    # Return simplified public data
+    # Return data matching frontend BlogPost interface (camelCase)
     return [
         {
             "slug": p.get("slug"),
             "title": p.get("title"),
             "excerpt": p.get("excerpt", "")[:200],
+            "content": p.get("content", ""),
             "category": p.get("category"),
-            "hero_image": p.get("heroImage"),
-            "published_at": p.get("publishedAt"),
-            "author": p.get("author"),
-            "tags": p.get("tags", [])
+            "heroImage": p.get("heroImage"),
+            "publishedAt": p.get("publishedAt"),
+            "updatedAt": p.get("updatedAt"),
+            "author": {
+                "name": p.get("author", "JASPER Research Team"),
+                "role": "Research Team",
+                "avatar": None
+            },
+            "tags": p.get("tags", []),
+            "readTime": p.get("readTime", 5),
+            "status": "published",
+            "seo": p.get("seo", {})
         }
         for p in posts
     ]
@@ -75,11 +105,19 @@ async def get_post(slug: str):
         "slug": post.get("slug"),
         "title": post.get("title"),
         "content": post.get("content"),
+        "content_blocks": post.get("content_blocks", []),
         "excerpt": post.get("excerpt"),
         "category": post.get("category"),
-        "hero_image": post.get("heroImage"),
-        "published_at": post.get("publishedAt"),
-        "author": post.get("author"),
+        "heroImage": post.get("heroImage"),
+        "publishedAt": post.get("publishedAt"),
+        "updatedAt": post.get("updatedAt"),
+        "author": {
+            "name": post.get("author", "JASPER Research Team"),
+            "role": "Research Team",
+            "avatar": None
+        },
         "tags": post.get("tags", []),
+        "readTime": post.get("readTime", 5),
+        "status": "published",
         "seo": post.get("seo", {})
     }
