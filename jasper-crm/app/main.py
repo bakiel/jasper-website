@@ -32,6 +32,7 @@ from routes.metrics import router as metrics_router
 from routes.images import router as images_router
 from routes.news import router as news_router
 from routes.prospector import router as prospector_router
+from routes.blog_public import router as blog_public_router
 from services.sequence_scheduler import sequence_scheduler
 from services.news_monitor import news_monitor
 from services.lead_prospector import lead_prospector
@@ -157,6 +158,7 @@ app.include_router(metrics_router)  # Prometheus Metrics & Health Aggregator
 app.include_router(images_router)  # Image Curation (Pixabay, Pexels, Unsplash)
 app.include_router(news_router)  # News Monitor (DFI Announcements, Current Events SEO)
 app.include_router(prospector_router)  # Lead Prospector (Active Lead Generation)
+app.include_router(blog_public_router, prefix="/api/v1")  # Public Blog API (Search, Posts)
 
 
 # --- Error Handlers ---

@@ -379,6 +379,62 @@ class BlogService:
 
         return posts[offset:offset + limit]
 
+    def search_posts(
+        self,
+        query: str,
+        limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """
+        Search published posts by title, excerpt, and content.
+        Returns simplified results for public search API.
+        """
+        if not query or len(query.strip()) < 2:
+            return []
+
+        query_lower = query.lower().strip()
+        posts = self._load_posts()
+
+        # Only search published posts
+        published = [p for p in posts if p.get("status") == "published"]
+
+        results = []
+        for post in published:
+            title = (post.get("title") or "").lower()
+            excerpt = (post.get("excerpt") or "").lower()
+            content = (post.get("content") or "").lower()
+            tags = " ".join(post.get("tags") or []).lower()
+
+            # Score based on where match is found
+            score = 0
+            if query_lower in title:
+                score += 10
+            if query_lower in excerpt:
+                score += 5
+            if query_lower in tags:
+                score += 3
+            if query_lower in content:
+                score += 1
+
+            if score > 0:
+                results.append({
+                    "slug": post.get("slug"),
+                    "title": post.get("title"),
+                    "excerpt": post.get("excerpt", "")[:200],
+                    "category": post.get("category"),
+                    "hero_image": post.get("heroImage"),
+                    "published_at": post.get("publishedAt"),
+                    "_score": score
+                })
+
+        # Sort by score (highest first)
+        results.sort(key=lambda x: x["_score"], reverse=True)
+
+        # Remove score and limit results
+        for r in results:
+            del r["_score"]
+
+        return results[:limit]
+
     def get_post_by_slug(self, slug: str) -> Optional[Dict[str, Any]]:
         """Get a single post by slug."""
         posts = self._load_posts()
