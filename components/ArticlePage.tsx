@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
+import { EmailCapturePopup } from './EmailCapturePopup';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -42,6 +43,15 @@ const categoryIcons: Record<string, React.ReactNode> = {
   'Sector Analysis': <TrendingUp className="w-4 h-4" />,
   'Case Studies': <Lightbulb className="w-4 h-4" />,
   'Industry News': <Newspaper className="w-4 h-4" />
+};
+
+// Map blog categories to email popup categories
+const getPopupCategory = (postCategory: string): 'dfi-insights' | 'climate-finance' | 'default' => {
+  const categoryMap: Record<string, 'dfi-insights' | 'climate-finance' | 'default'> = {
+    'DFI Insights': 'dfi-insights',
+    'Climate Finance': 'climate-finance',
+  };
+  return categoryMap[postCategory] || 'default';
 };
 
 // Format date for display
@@ -430,6 +440,9 @@ export const ArticlePage: React.FC<ArticlePageProps> = ({ slug, onBack, onNaviga
   return (
     <div className="min-h-screen bg-brand-navy text-brand-text font-sans selection:bg-brand-emerald selection:text-brand-navy">
       <Navbar onNavigate={onNavigate} />
+
+      {/* Email Capture Popup - appears at 60% scroll */}
+      <EmailCapturePopup category={getPopupCategory(post.category)} />
 
       <main className="pt-32 pb-20">
         {/* Article Header */}
