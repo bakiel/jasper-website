@@ -554,6 +554,163 @@ async def collect_lead(
 
 
 # =============================================================================
+# CONTACT FORM WEBHOOK (from jasper-api)
+# =============================================================================
+
+class ContactFormPayload(BaseModel):
+    """Contact form submission from jasper-api"""
+    name: str
+    email: str
+    company: str
+    phone: Optional[str] = None
+    sector: Optional[str] = None
+    funding_stage: Optional[str] = None
+    funding_amount: Optional[str] = None
+    message: Optional[str] = None
+    source: str = "website_contact_form"
+    reference: Optional[str] = None
+
+
+@router.post("/contact-form")
+async def contact_form_webhook(
+    payload: ContactFormPayload,
+    request: Request,
+    background_tasks: BackgroundTasks
+):
+    """
+    Webhook for contact form submissions from jasper-api.
+
+    This endpoint:
+    1. Creates a lead in the CRM database
+    2. Triggers AI qualification via AgenticBrain
+    3. Schedules initial outreach via CommsAgent
+
+    Called by: jasper-api/api/contact.js
+    """
+    # Optional: Verify webhook secret
+    webhook_secret = os.getenv("WEBHOOK_SECRET", "")
+    provided_secret = request.headers.get("X-Webhook-Secret", "")
+
+    if webhook_secret and provided_secret != webhook_secret:
+        logger.warning("Contact form webhook secret mismatch")
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        from db.leads import create_lead, get_lead_by_email
+        from app.main import app
+
+        brain = getattr(app.state, 'agentic_brain', None)
+
+        # Check for existing lead
+        existing_lead = await get_lead_by_email(payload.email.lower())
+        if existing_lead:
+            logger.info(f"Contact form: Existing lead found for {payload.email}")
+            return {
+                "success": True,
+                "lead_id": existing_lead.id,
+                "message": "Lead already exists",
+                "is_existing": True
+            }
+
+        # Map sector values (contact form uses kebab-case, CRM uses snake_case)
+        sector_map = {
+            "renewable-energy": "renewable_energy",
+            "data-centres": "data_centres",
+            "agri-industrial": "agri_industrial",
+            "climate-finance": "climate_finance",
+            "technology": "technology",
+            "manufacturing": "manufacturing",
+            "other": "other"
+        }
+
+        stage_map = {
+            "seed": "seed",
+            "series-a": "series_a",
+            "series-b": "series_b",
+            "growth": "growth",
+            "expansion": "expansion",
+            "other": "other"
+        }
+
+        # Create lead - handle None values for sector/funding_stage
+        lead = await create_lead({
+            "name": payload.name,
+            "email": payload.email.lower(),
+            "phone": payload.phone,
+            "company": payload.company,
+            "sector": sector_map.get(payload.sector, "other") if payload.sector else "other",
+            "funding_stage": stage_map.get(payload.funding_stage, "other") if payload.funding_stage else "other",
+            "funding_amount": payload.funding_amount,
+            "message": payload.message,
+            "source": payload.source or "website_contact_form",
+            "tags": ["contact_form", payload.reference] if payload.reference else ["contact_form"],
+        })
+
+        logger.info(f"Contact form: Created lead {lead.id} for {payload.email}")
+
+        # Trigger AgenticBrain for AI qualification and outreach
+        if brain:
+            background_tasks.add_task(
+                brain.handle_event,
+                lead_created_event(
+                    lead_id=lead.id,
+                    source="website_contact_form",
+                    data={
+                        "name": payload.name,
+                        "email": payload.email,
+                        "company": payload.company,
+                        "sector": payload.sector,
+                        "funding_stage": payload.funding_stage,
+                        "message": payload.message,
+                        "reference": payload.reference,
+                    }
+                )
+            )
+            logger.info(f"Contact form: Queued AgenticBrain processing for {lead.id}")
+
+        # Queue initial outreach email via CommsAgent
+        async def send_initial_outreach():
+            try:
+                result = await comms_agent.initial_outreach(
+                    lead={
+                        "id": lead.id,
+                        "name": payload.name,
+                        "email": payload.email,
+                        "company": payload.company,
+                        "sector": payload.sector,
+                        "funding_stage": payload.funding_stage,
+                        "message": payload.message,
+                        "source": "website_contact_form",
+                    },
+                    channel="email"
+                )
+                if result.get("body"):
+                    await comms_agent.send_email(
+                        to_email=payload.email,
+                        subject=result.get("subject", "Thank you for contacting JASPER"),
+                        body=result["body"]
+                    )
+                    logger.info(f"Contact form: Sent AI outreach to {payload.email}")
+            except Exception as e:
+                logger.error(f"Contact form outreach error: {e}")
+
+        background_tasks.add_task(send_initial_outreach)
+
+        return {
+            "success": True,
+            "lead_id": lead.id,
+            "message": "Lead created successfully",
+            "is_existing": False
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Contact form webhook error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
 # CONVERSATION HISTORY
 # =============================================================================
 
