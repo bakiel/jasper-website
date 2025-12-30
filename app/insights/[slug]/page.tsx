@@ -522,8 +522,11 @@ const ArticlePage: React.FC<ArticlePageProps> = ({ slug, onBack, onNavigate }) =
     if (!slug) return;
 
     const loadPost = async () => {
+      console.log('[ArticlePage] Loading article with slug:', slug);
+
       // First try static data for immediate render
       const staticPost = getPostBySlug(slug);
+      console.log('[ArticlePage] Static post found:', !!staticPost);
       if (staticPost) {
         setPost(staticPost);
         setRelatedPosts(getRelatedPosts(slug, 3));
@@ -532,18 +535,24 @@ const ArticlePage: React.FC<ArticlePageProps> = ({ slug, onBack, onNavigate }) =
 
       // Then fetch from API for latest content
       try {
+        console.log('[ArticlePage] Fetching from API...');
         const [apiPost, apiRelated] = await Promise.all([
           getPostBySlugAsync(slug),
           getRelatedPostsAsync(slug, 3),
         ]);
 
+        console.log('[ArticlePage] API post found:', !!apiPost);
+        console.log('[ArticlePage] API post data:', apiPost ? { title: apiPost.title, slug: apiPost.slug } : null);
+
         if (apiPost) {
           setPost(apiPost);
           setRelatedPosts(apiRelated);
+        } else {
+          console.warn('[ArticlePage] No API post found for slug:', slug);
         }
         setLoading(false);
       } catch (error) {
-        console.warn('Failed to load from API:', error);
+        console.error('[ArticlePage] Failed to load from API:', error);
         setLoading(false);
       }
     };

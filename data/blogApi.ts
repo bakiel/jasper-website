@@ -13,6 +13,7 @@ const BLOG_API_URL = 'https://api.jasperfinance.org/api/v1/blog';
  */
 export async function fetchBlogPosts(): Promise<BlogPost[]> {
   try {
+    console.log('[BlogAPI] Fetching from:', `${BLOG_API_URL}/posts`);
     const response = await fetch(`${BLOG_API_URL}/posts`, {
       method: 'GET',
       headers: {
@@ -22,26 +23,33 @@ export async function fetchBlogPosts(): Promise<BlogPost[]> {
       cache: 'no-store',
     });
 
+    console.log('[BlogAPI] Response status:', response.status);
+
     if (!response.ok) {
-      console.warn(`Blog API returned ${response.status}, falling back to static data`);
+      console.warn(`[BlogAPI] Blog API returned ${response.status}, falling back to static data`);
       return [];
     }
 
     const data = await response.json();
+    console.log('[BlogAPI] Response type:', Array.isArray(data) ? 'Array' : typeof data);
+    console.log('[BlogAPI] Response length:', Array.isArray(data) ? data.length : 'N/A');
 
     // API returns array directly, not wrapped in { success, posts }
     if (Array.isArray(data)) {
+      console.log('[BlogAPI] Returning', data.length, 'posts from array response');
       return data as BlogPost[];
     }
 
     // Fallback for legacy format
     if (data.success && Array.isArray(data.posts)) {
+      console.log('[BlogAPI] Returning', data.posts.length, 'posts from legacy format');
       return data.posts;
     }
 
+    console.warn('[BlogAPI] Unknown response format, returning empty array');
     return [];
   } catch (error) {
-    console.warn('Failed to fetch from Blog API, using static data:', error);
+    console.error('[BlogAPI] Failed to fetch from Blog API:', error);
     return [];
   }
 }
@@ -99,8 +107,13 @@ export async function getAllCategoriesAsync(): Promise<BlogPost['category'][]> {
  * Get post by slug from combined sources
  */
 export async function getPostBySlugAsync(slug: string): Promise<BlogPost | undefined> {
+  console.log('[BlogAPI] getPostBySlugAsync called with slug:', slug);
   const posts = await getPublishedPostsAsync();
-  return posts.find(post => post.slug === slug);
+  console.log('[BlogAPI] Total published posts:', posts.length);
+  console.log('[BlogAPI] Available slugs:', posts.map(p => p.slug));
+  const foundPost = posts.find(post => post.slug === slug);
+  console.log('[BlogAPI] Found post:', foundPost ? foundPost.title : 'NOT FOUND');
+  return foundPost;
 }
 
 /**
