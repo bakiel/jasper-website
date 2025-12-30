@@ -19,19 +19,22 @@ interface ServicesPageProps {
 const PACKAGE_ICONS: Record<string, any> = {
   'Growth': Zap,
   'Institutional': Landmark,
-  'Infrastructure': Factory
+  'Infrastructure': Factory,
+  'Strategic': Landmark
 };
 
 const PACKAGE_COLORS: Record<string, string> = {
   'Growth': 'text-yellow-400',
   'Institutional': 'text-brand-emerald',
-  'Infrastructure': 'text-blue-400'
+  'Infrastructure': 'text-blue-400',
+  'Strategic': 'text-purple-400'
 };
 
 const PACKAGE_BG: Record<string, string> = {
   'Growth': 'bg-yellow-400',
   'Institutional': 'bg-brand-emerald',
-  'Infrastructure': 'bg-blue-400'
+  'Infrastructure': 'bg-blue-400',
+  'Strategic': 'bg-purple-400'
 };
 
 export const ServicesPage: React.FC<ServicesPageProps> = ({ onBack, initialPackage = 'Institutional' }) => {

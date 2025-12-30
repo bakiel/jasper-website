@@ -23,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLaunchMethodology, onOpenServi
       label: 'Services',
       href: '/#services',
       type: 'megamenu',
+      onClick: 'openServices',
       children: [
         {
           label: 'Growth',
