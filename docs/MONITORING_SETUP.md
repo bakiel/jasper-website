@@ -7,24 +7,30 @@ Go to https://uptimerobot.com and create a free account.
 
 ### Step 2: Add Monitors
 
-Create these 4 monitors:
+#### Monitor 1: CRM API Health
+- **Type**: HTTP(S)
+- **URL**: `https://api.jasperfinance.org/status`
+- **Friendly Name**: JASPER CRM API
+- **Monitoring Interval**: 5 minutes
+- **Alert Contacts**: Add your email
 
-| Name | URL | Type | Interval |
-|------|-----|------|----------|
-| JASPER Status | `https://api.jasperfinance.org/status` | HTTP(s) | 5 min |
-| JASPER Marketing Site | `https://jasperfinance.org` | HTTP(s) | 5 min |
-| JASPER Admin Portal | `https://portal.jasperfinance.org` | HTTP(s) | 5 min |
-| JASPER API Health | `https://api.jasperfinance.org/health/aggregated` | HTTP(s) | 5 min |
+#### Monitor 2: Marketing Site
+- **Type**: HTTP(S)
+- **URL**: `https://jasperfinance.org`
+- **Friendly Name**: JASPER Marketing Site
+- **Monitoring Interval**: 5 minutes
+
+#### Monitor 3: Admin Portal  
+- **Type**: HTTP(S)
+- **URL**: `https://portal.jasperfinance.org`
+- **Friendly Name**: JASPER Admin Portal
+- **Monitoring Interval**: 5 minutes
 
 ### Step 3: Configure Alerts
-
-1. Go to "Alert Contacts"
-2. Add your email: bakiel@kutlwano.holdings
-3. (Optional) Add WhatsApp via Twilio integration
-
-### Step 4: Verify Monitors
-
-All should show "Up" status within 5 minutes.
+1. Go to My Settings → Alert Contacts
+2. Add your email and phone number
+3. Enable "Send email when monitor goes down"
+4. Enable "Send email when monitor comes back up"
 
 ---
 
@@ -32,49 +38,52 @@ All should show "Up" status within 5 minutes.
 
 | Endpoint | Purpose | Response |
 |----------|---------|----------|
-| `/status` | Quick overview | `{"overall": "healthy", "services": {...}}` |
-| `/health/detailed` | CRM internals | Database, cache, API keys |
-| `/health/aggregated` | All services | CRM, API, sites, portals |
-| `/health/system` | Infrastructure | Disk, data files, backups |
-| `/health/live` | Liveness probe | `{"status": "alive"}` |
-| `/health/ready` | Readiness probe | `{"status": "ready"}` |
+| `/health` | Simple liveness | `{"status":"healthy"}` |
+| `/health/detailed` | DB + cache + services | Full check with timings |
+| `/health/system` | Disk + files + backups | System-level status |
+| `/status` | Combined quick check | **Use for UptimeRobot** |
+| `/metrics` | Prometheus format | For Grafana/Prometheus |
+
+---
+
+## Quick Test Commands
+
+```bash
+# Local health check
+curl -s https://api.jasperfinance.org/status | jq
+
+# All services status
+curl -s https://api.jasperfinance.org/health/aggregated | jq
+
+# System health (disk, backups)
+curl -s https://api.jasperfinance.org/health/system | jq
+```
 
 ---
 
 ## Alert Thresholds
 
-| Metric | Warning | Critical |
-|--------|---------|----------|
-| Disk Free | < 10GB | < 5GB |
-| Backup Age | > 24 hours | > 48 hours |
-| Service Down | 1 service | > 2 services |
+The `/status` endpoint returns warnings when:
+- Backup age > 24 hours → `"overall": "warning"`
+- Any service down → `"overall": "degraded"`
+- Disk < 5GB free → Warning in `/health/system`
 
 ---
 
-## Manual Health Check
+## Manual Health Check Script
+
+Save this to run manually or via cron:
 
 ```bash
-# Quick status
-curl -s https://api.jasperfinance.org/status | jq .
+#!/bin/bash
+# /usr/local/bin/jasper-health-check.sh
 
-# Full service health
-curl -s https://api.jasperfinance.org/health/aggregated | jq .
+STATUS=$(curl -s https://api.jasperfinance.org/status)
+OVERALL=$(echo $STATUS | jq -r '.overall')
 
-# System health (disk, backups)
-curl -s https://api.jasperfinance.org/health/system | jq .
-```
-
----
-
-## Backup Verification
-
-```bash
-# Check backup exists
-ssh root@72.61.201.237 'ls -lh /root/backups/'
-
-# Run manual backup
-ssh root@72.61.201.237 '/opt/jasper-crm/scripts/backup_all.sh'
-
-# Check backup log
-ssh root@72.61.201.237 'tail -20 /var/log/jasper-backup.log'
+if [ "$OVERALL" != "healthy" ]; then
+    echo "JASPER ALERT: Status is $OVERALL"
+    echo $STATUS | jq
+    # Add notification here (email, Slack, etc.)
+fi
 ```

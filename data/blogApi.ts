@@ -7,15 +7,9 @@ import { BlogPost, BLOG_POSTS, getPublishedPosts as getStaticPublishedPosts } fr
 
 const BLOG_API_URL = 'https://api.jasperfinance.org/api/v1/blog';
 
-interface ApiResponse {
-  success: boolean;
-  posts: BlogPost[];
-  featuredPost?: BlogPost;
-  categories?: { name: string; count: number }[];
-}
-
 /**
  * Fetch posts from the live Blog API
+ * API returns an array of posts directly: [{...}, {...}]
  */
 export async function fetchBlogPosts(): Promise<BlogPost[]> {
   try {
@@ -33,8 +27,14 @@ export async function fetchBlogPosts(): Promise<BlogPost[]> {
       return [];
     }
 
-    const data: ApiResponse = await response.json();
+    const data = await response.json();
 
+    // API returns array directly, not wrapped in { success, posts }
+    if (Array.isArray(data)) {
+      return data as BlogPost[];
+    }
+
+    // Fallback for legacy format
     if (data.success && Array.isArray(data.posts)) {
       return data.posts;
     }
