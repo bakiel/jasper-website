@@ -1,48 +1,58 @@
-# JASPER SEO Enhancement - Swarm TODO
+# JASPER Stabilization Progress
 
-## Agent Tasks
+## Current Phase: 2 - Monitoring
 
-### 🔴 citation_service.py - NOT STARTED
-- [ ] Create jasper-crm/services/citation_service.py
-- [ ] detect_claims() - Find factual claims needing sources
-- [ ] find_source() - Use Gemini grounding for authoritative sources
-- [ ] insert_footnotes() - Add [^1] markers to content
-- [ ] generate_references_section() - Chicago-style refs
-- [ ] CitationService class with process_article(slug)
-- [ ] Test: tests/test_citation_service.py
+## Phase 1: Safety ✅ COMPLETE
+- [x] Manual backup taken (jasper-pre-stabilization-20251230_044756.tar.gz, 34MB)
+- [x] Backup script created (/opt/jasper-crm/scripts/backup_all.sh)
+- [x] Cron configured for twice daily (6am and 6pm UTC)
+- [x] Health endpoint enhanced (/health/system - disk, data files, backup status)
+- [x] Log rotation configured (/etc/logrotate.d/jasper)
+PHASE_1_COMPLETE
 
-### 🔴 link_builder_service.py - NOT STARTED
-- [ ] Create jasper-crm/services/link_builder_service.py  
-- [ ] build_article_index() - TF-IDF index of 30 articles
-- [ ] find_related_articles() - Score-based matching (max 5)
-- [ ] find_external_sources() - ifc.org, afdb.org, worldbank.org
-- [ ] insert_links() - Natural placement (not in H1/first para)
-- [ ] LinkBuilderService class with process_article(slug)
-- [ ] Test: tests/test_link_builder_service.py
+## Phase 2: Monitoring
+- [ ] Status endpoint working (already have /health/aggregated)
+- [ ] UptimeRobot setup documented
 
-### 🔴 ab_title_service.py - NOT STARTED
-- [ ] Create jasper-crm/services/ab_title_service.py
-- [ ] generate_variants() - 3 title options per article
-- [ ] track_click() - Record CTR data
-- [ ] get_winner() - Return best performing title
-- [ ] ABTitleService class with process_article(slug)
-- [ ] Test: tests/test_ab_title_service.py
+## Phase 3: Tests
+- [ ] Test directory exists
+- [ ] Health tests pass
+- [ ] Blog tests pass
+- [ ] Contact form tests pass
+- [ ] All tests green
 
-### 🔴 Integration - NOT STARTED
-- [ ] Update enhancement_orchestrator.py imports
-- [ ] Wire _add_citations() method
-- [ ] Wire _add_internal_links() method
-- [ ] Wire _generate_ab_titles() method
-- [ ] Test full pipeline
+## Phase 4: Documentation
+- [ ] RUNBOOK.md created
+- [ ] ARCHITECTURE.md created
+- [ ] /docs accessible
+- [ ] /redoc accessible
 
-### 🔴 Deployment - NOT STARTED
-- [ ] Copy all services to VPS 72.61.201.237
-- [ ] Restart jasper-crm
-- [ ] Verify /api/v1/health returns healthy
-- [ ] Test /api/v1/content/enhance endpoint
+## Phase 5: CI/CD
+- [ ] GitHub Actions workflow
+- [ ] Deploy script on VPS
+- [ ] Pipeline tested
 
 ---
 
-## Completion Marker
-When ALL tasks above are checked [x], add this line:
-<!-- SWARM_COMPLETE -->
+## Health Endpoints Available
+- /health/detailed - CRM service health
+- /health/aggregated - All services health  
+- /health/system - Disk, data files, backups
+- /health/live - Liveness probe
+- /health/ready - Readiness probe
+
+## Backup Info
+- Location: /root/backups/
+- Script: /opt/jasper-crm/scripts/backup_all.sh
+- Schedule: 0 6,18 * * * (twice daily)
+- Retention: 14 days
+
+---
+
+## Completion Markers
+PHASE_1_COMPLETE
+<!-- PHASE_2_COMPLETE -->
+<!-- PHASE_3_COMPLETE -->
+<!-- PHASE_4_COMPLETE -->
+<!-- PHASE_5_COMPLETE -->
+<!-- ALL_PHASES_VERIFIED -->

@@ -1,72 +1,65 @@
-# JASPER SEO Enhancement Project
+# JASPER Stabilization Mode
 
-## Current Mission
-Build 3 missing SEO services with stop hooks for autonomous operation.
+## 🎯 CURRENT MISSION: STABILIZE (NO NEW FEATURES)
 
-## Project Structure
-```
-jasper-financial-architecture/
-├── jasper-crm/              # Python FastAPI backend
-│   ├── services/            # Business logic (CREATE SERVICES HERE)
-│   ├── routes/              # API endpoints
-│   ├── db/                  # Database layer
-│   └── data/blog_posts.json # 30 articles
-├── docs/
-│   └── INTERNAL_LINK_BUILDER_PLAN.md  # FULL SPEC - READ THIS FIRST
-└── TODO.md                  # Progress tracker
-```
+Read `STABILIZATION_PROMPT.md` for full details.
 
-## Services to Create
+## Quick Reference
 
-### 1. citation_service.py
-Academic footnotes with source attribution.
-- Max 5 citations per article
-- Chicago-style format
-- Use Gemini for source discovery
-
-### 2. link_builder_service.py  
-Internal + external SEO links.
-- 3-5 internal links per article (TF-IDF matching)
-- 1-2 external authoritative links
-- BLOCKED: medium.com, linkedin.com, wikipedia.org
-- PREFERRED: ifc.org, afdb.org, worldbank.org
-
-### 3. ab_title_service.py
-A/B testing for article titles.
-- 3 variants per article
-- CTR tracking
-
-## Existing Services (Don't Recreate)
-- news_monitor.py ✅ - RSS feeds working
-- keyword_service.py ✅ - gap_analysis() working
-- enhancement_orchestrator.py ✅ - Needs imports fixed
-- ai_router.py ✅ - DeepSeek/Gemini routing
-
-## AI Model Usage
-```python
-from services.ai_router import AIRouter, AITask
-
-ai_router = AIRouter()
-result = await ai_router.route(
-    AITask.CONTENT_EDITING,
-    prompt=your_prompt,
-    max_tokens=4000
-)
-```
-
-## VPS Deployment
+### VPS Access
 ```bash
-scp jasper-crm/services/*.py root@72.61.201.237:/opt/jasper-crm/services/
-ssh root@72.61.201.237 'systemctl restart jasper-crm'
+ssh root@72.61.201.237
 ```
 
-## Stop Hook
-This project has stop hooks configured. Keep working until:
-- All 3 services created
-- Tests pass
-- TODO.md contains SWARM_COMPLETE marker
+### Services
+```bash
+systemctl status jasper-crm
+systemctl status jasper-celery-worker
+systemctl status jasper-main-site
+journalctl -u jasper-crm -f  # Live logs
+```
 
-## Read First
-1. docs/INTERNAL_LINK_BUILDER_PLAN.md - Full specifications
-2. jasper-crm/services/enhancement_orchestrator.py - See what's missing
-3. jasper-crm/services/keyword_service.py - Reference implementation
+### Key Paths (VPS)
+```
+/opt/jasper-crm/           # CRM backend
+/opt/jasper-crm/data/      # JSON data files
+/opt/jasper-main-site/     # Marketing site
+/root/backups/             # Backup storage
+/var/log/nginx/            # Nginx logs
+```
+
+### Key Paths (Local)
+```
+~/Downloads/jasper-financial-architecture/
+├── jasper-crm/            # Backend code
+├── jasper-portal-frontend/ # Admin portal
+├── src/                   # Marketing site
+└── STABILIZATION_PROMPT.md # Full mission brief
+```
+
+### Deploy Commands
+```bash
+# Sync single file
+scp jasper-crm/file.py root@72.61.201.237:/opt/jasper-crm/
+
+# Restart service
+ssh root@72.61.201.237 'systemctl restart jasper-crm'
+
+# Check health
+curl https://api.jasperfinance.org/api/v1/health
+```
+
+## Phase Checklist
+
+- [ ] Phase 1: Backups + Health checks
+- [ ] Phase 2: Monitoring + Alerts
+- [ ] Phase 3: Tests
+- [ ] Phase 4: Documentation
+- [ ] Phase 5: CI/CD
+
+## RULES
+
+1. **BACKUP FIRST** before any change
+2. **NO NEW FEATURES** - stabilization only
+3. **TEST BEFORE DEPLOY**
+4. **SMALL CHANGES** - one at a time

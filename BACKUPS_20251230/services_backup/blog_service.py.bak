@@ -1,0 +1,1140 @@
+"""
+JASPER CRM - Blog Service
+Business logic for blog management with activity logging.
+
+Features:
+- CRUD operations on blog posts (JSON storage)
+- Activity logging via existing ActivityLogTable
+- SEO score calculation on save
+- Social sharing status tracking
+- Star rating system
+- Integration with content_service for AI generation
+- Integration with image_service for stock photos
+"""
+
+import os
+import json
+import logging
+from datetime import datetime
+from typing import Dict, List, Any, Optional
+from pathlib import Path
+import uuid
+import re
+import httpx
+
+from db.database import SessionLocal
+from db.tables import ActivityLogTable
+from services.seo_scorer import seo_scorer, SEOResult
+from services.content_service import content_service
+from services.image_service import image_service, ensure_jpeg_url
+from services.ai_image_service import generate_article_images, get_fallback_image
+from services.image_library_service import image_library
+
+logger = logging.getLogger(__name__)
+
+
+def _optimize_image_url(url: str) -> str:
+    """Ensure hero image URL is optimized (JPEG, 1600px max width)."""
+    if not url or url == "/images/blog/default.jpg":
+        return url
+    return ensure_jpeg_url(url, quality=80, max_width=1600)
+
+# Blog posts JSON file location
+BLOG_DATA_PATH = Path(__file__).parent.parent / "data" / "blog_posts.json"
+
+
+class BlogService:
+    """
+    Blog management service with full transparency logging.
+
+    All actions are logged to ActivityLogTable with entity_type="blog".
+    """
+
+    def __init__(self):
+        self.data_path = BLOG_DATA_PATH
+        self._ensure_data_file()
+
+        # Social service URL (jasper-social on port 8002)
+        self.social_api_url = os.getenv("SOCIAL_API_URL", "http://localhost:8002")
+
+        # Notification webhooks (from Doppler/env)
+        self.discord_webhook = os.getenv("DISCORD_WEBHOOK_URL")
+        self.slack_webhook = os.getenv("SLACK_WEBHOOK_URL")
+
+    def _ensure_data_file(self):
+        """Ensure blog_posts.json exists."""
+        if not self.data_path.exists():
+            self.data_path.parent.mkdir(parents=True, exist_ok=True)
+            self._save_posts([])
+
+    def _load_posts(self) -> List[Dict[str, Any]]:
+        """Load all posts from JSON file."""
+        try:
+            with open(self.data_path, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Failed to load blog posts: {e}")
+            return []
+
+    def _save_posts(self, posts: List[Dict[str, Any]]):
+        """Save posts to JSON file."""
+        try:
+            with open(self.data_path, "w") as f:
+                json.dump(posts, f, indent=2, default=str)
+        except Exception as e:
+            logger.error(f"Failed to save blog posts: {e}")
+            raise
+
+    def _generate_slug(self, title: str) -> str:
+        """Generate URL-friendly slug from title."""
+        slug = title.lower()
+        slug = re.sub(r'[^a-z0-9\s-]', '', slug)
+        slug = re.sub(r'\s+', '-', slug)
+        slug = re.sub(r'-+', '-', slug)
+        return slug.strip('-')
+
+    def _log_activity(
+        self,
+        entity_id: str,
+        action: str,
+        details: Optional[Dict[str, Any]] = None,
+        user_id: str = "system"
+    ):
+        """Log activity using existing ActivityLogTable."""
+        try:
+            db = SessionLocal()
+            activity = ActivityLogTable(
+                entity_type="blog",
+                entity_id=entity_id,
+                action=action,
+                details=json.dumps(details) if details else None,
+                user_id=user_id
+            )
+            db.add(activity)
+            db.commit()
+            db.close()
+            logger.info(f"Activity logged: blog/{entity_id} - {action}")
+        except Exception as e:
+            logger.error(f"Failed to log activity: {e}")
+
+    async def _notify_slack_discord(
+        self,
+        event: str,
+        title: str,
+        url: Optional[str] = None,
+        **kwargs
+    ):
+        """Send transparency notifications to Slack and Discord."""
+        messages = {
+            "blog_created": f"📝 **New Draft Created**\n{title}",
+            "blog_published": f"🚀 **Blog Published**\n{title}\n{url or ''}",
+            "blog_shared_twitter": f"🐦 **Tweeted**\n{title}\n{kwargs.get('tweet_url', '')}",
+            "blog_shared_linkedin": f"💼 **LinkedIn Post**\n{title}",
+            "blog_seo_optimized": f"📊 **SEO Optimized**\n{title}\nScore: {kwargs.get('old_score', '?')} → {kwargs.get('new_score', '?')}",
+            "blog_scheduled": f"📅 **Scheduled**\n{title}\nFor: {kwargs.get('scheduled_for', '?')}",
+        }
+
+        message = messages.get(event, f"📌 Blog: {event} - {title}")
+
+        async with httpx.AsyncClient() as client:
+            # Send to Discord
+            if self.discord_webhook:
+                try:
+                    await client.post(self.discord_webhook, json={"content": message})
+                except Exception as e:
+                    logger.error(f"Discord notification failed: {e}")
+
+            # Send to Slack
+            if self.slack_webhook:
+                try:
+                    await client.post(self.slack_webhook, json={"text": message})
+                except Exception as e:
+                    logger.error(f"Slack notification failed: {e}")
+
+    # =========================================================================
+    # CRUD OPERATIONS
+    # =========================================================================
+
+    def get_all_posts(
+        self,
+        status: Optional[str] = None,
+        category: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Get all posts with optional filtering."""
+        posts = self._load_posts()
+
+        if status:
+            posts = [p for p in posts if p.get("status") == status]
+        if category:
+            posts = [p for p in posts if p.get("category") == category]
+
+        # Sort by publishedAt or createdAt (newest first)
+        posts.sort(
+            key=lambda p: p.get("publishedAt") or p.get("createdAt") or "",
+            reverse=True
+        )
+
+        return posts[offset:offset + limit]
+
+    def get_post_by_slug(self, slug: str) -> Optional[Dict[str, Any]]:
+        """Get a single post by slug."""
+        posts = self._load_posts()
+        for post in posts:
+            if post.get("slug") == slug:
+                return post
+        return None
+
+    # Alias for compatibility
+    def get_post(self, slug: str) -> Optional[Dict[str, Any]]:
+        """Alias for get_post_by_slug for API compatibility."""
+        return self.get_post_by_slug(slug)
+
+    def create_post(
+        self,
+        title: str,
+        content: str = "",
+        excerpt: str = "",
+        category: str = "DFI Insights",
+        tags: List[str] = None,
+        status: str = "draft",
+        author: str = "JASPER Research Team",
+        hero_image: str = None,
+        seo: Dict[str, Any] = None,
+        user_id: str = "system",
+        source: str = "manual"
+    ) -> Dict[str, Any]:
+        """Create a new blog post (draft by default)."""
+        posts = self._load_posts()
+
+        # Ensure content is never None
+        content = content or ""
+        excerpt = excerpt or ""
+
+        slug = self._generate_slug(title)
+
+        # Ensure unique slug
+        existing_slugs = [p.get("slug") for p in posts]
+        if slug in existing_slugs:
+            counter = 2
+            while f"{slug}-{counter}" in existing_slugs:
+                counter += 1
+            slug = f"{slug}-{counter}"
+
+        now = datetime.utcnow().isoformat() + "Z"
+
+        # Calculate SEO score
+        post_data = {
+            "title": title,
+            "content": content,
+            "excerpt": excerpt,
+            "slug": slug,
+            "seo": seo or {}
+        }
+        seo_result = seo_scorer.calculate_score(post_data)
+
+        # Calculate read time safely
+        word_count = len(content.split()) if content else 0
+        read_time = max(1, word_count // 200)
+
+        # Generate excerpt if not provided
+        auto_excerpt = excerpt if excerpt else (content[:200] + "..." if len(content) > 200 else content)
+
+        # Get SEO values safely
+        seo_title = title[:60] if len(title) <= 60 else title[:57] + "..."
+        seo_desc = auto_excerpt[:160] if len(auto_excerpt) <= 160 else auto_excerpt[:157] + "..."
+        if seo:
+            seo_title = seo.get("title") or seo_title
+            seo_desc = seo.get("description") or seo_desc
+
+        new_post = {
+            "slug": slug,
+            "title": title,
+            "content": content,
+            "excerpt": auto_excerpt,
+            "category": category,
+            "tags": tags or [],
+            "status": status,
+            "author": author,
+            "readTime": read_time,
+            "featured": False,
+            "heroImage": _optimize_image_url(hero_image) if hero_image else "/images/blog/default.jpg",
+            "publishedAt": None,
+            "createdAt": now,
+            "updatedAt": now,
+            "scheduledFor": None,
+            "seo": {
+                "title": seo_title,
+                "description": seo_desc,
+                "score": seo_result.score,
+                "keywords": seo.get("keywords", tags) if seo else tags or []
+            },
+            "social": {
+                "twitterShared": False,
+                "twitterPostId": None,
+                "twitterSharedAt": None,
+                "linkedinShared": False,
+                "linkedinPostId": None,
+                "linkedinSharedAt": None
+            },
+            "rating": {
+                "average": 0,
+                "count": 0,
+                "distribution": {"5": 0, "4": 0, "3": 0, "2": 0, "1": 0}
+            },
+            "aiGenerated": source == "ai"
+        }
+
+        posts.append(new_post)
+        self._save_posts(posts)
+
+        # Log activity
+        self._log_activity(
+            entity_id=slug,
+            action="created",
+            details={"title": title, "source": source, "category": category},
+            user_id=user_id
+        )
+
+        return new_post
+
+    def update_post(
+        self,
+        slug: str,
+        updates: Dict[str, Any],
+        user_id: str = "system"
+    ) -> Optional[Dict[str, Any]]:
+        """Update an existing post."""
+        posts = self._load_posts()
+
+        for i, post in enumerate(posts):
+            if post.get("slug") == slug:
+                # Track what changed
+                changes = {}
+                for key, value in updates.items():
+                    if key in post and post[key] != value:
+                        changes[key] = {"old": post[key], "new": value}
+
+                # Apply updates
+                for key, value in updates.items():
+                    if key != "slug":  # Don't allow slug changes
+                        post[key] = value
+
+                post["updatedAt"] = datetime.utcnow().isoformat() + "Z"
+
+                # Recalculate SEO score
+                seo_result = seo_scorer.calculate_score(post)
+                if "seo" not in post:
+                    post["seo"] = {}
+                post["seo"]["score"] = seo_result.score
+
+                posts[i] = post
+                self._save_posts(posts)
+
+                # Log activity
+                self._log_activity(
+                    entity_id=slug,
+                    action="updated",
+                    details={"changes": changes},
+                    user_id=user_id
+                )
+
+                return post
+
+        return None
+
+    def delete_post(self, slug: str, user_id: str = "system") -> bool:
+        """Soft delete (archive) a post."""
+        posts = self._load_posts()
+
+        for post in posts:
+            if post.get("slug") == slug:
+                post["status"] = "archived"
+                post["archivedAt"] = datetime.utcnow().isoformat() + "Z"
+                self._save_posts(posts)
+
+                self._log_activity(
+                    entity_id=slug,
+                    action="archived",
+                    details={"title": post.get("title")},
+                    user_id=user_id
+                )
+                return True
+
+        return False
+
+    # =========================================================================
+    # PUBLISHING - With Blog Bouncer Quality Gate
+    # =========================================================================
+
+    # Quality thresholds (Blog Bouncer)
+    GROUNDING_THRESHOLD = 80.0  # 80% of claims must be verified
+    SEO_THRESHOLD = 70.0        # 70% SEO score minimum
+
+    async def publish_post(
+        self,
+        slug: str,
+        auto_share: bool = False,
+        user_id: str = "system",
+        force: bool = False  # Allow bypass for admin override
+    ) -> Dict[str, Any]:
+        """
+        Publish a post with Blog Bouncer quality gate enforcement.
+        
+        Quality Requirements:
+        - Grounding score >= 80% (factual claims verified)
+        - SEO score >= 70%
+        
+        If requirements not met, returns error with details.
+        Use force=True to bypass (admin override only).
+        """
+        posts = self._load_posts()
+        post = None
+        post_index = -1
+
+        for i, p in enumerate(posts):
+            if p.get("slug") == slug:
+                post = p
+                post_index = i
+                break
+
+        if not post:
+            return {"success": False, "error": "Post not found", "slug": slug}
+
+        # =====================================================================
+        # BLOG BOUNCER QUALITY GATE
+        # =====================================================================
+        
+        if not force:
+            quality_issues = []
+            
+            # Check grounding verification
+            grounding_score = post.get("groundingScore", 0)
+            grounding_verified = post.get("groundingVerified", False)
+            grounding_passes = post.get("groundingPasses", False)
+            
+            if not grounding_verified:
+                quality_issues.append({
+                    "type": "grounding_not_verified",
+                    "message": "Article has not been grounding-verified. Run verification first.",
+                    "action": "POST /api/v1/blog/posts/{slug}/grounding/verify"
+                })
+            elif not grounding_passes or grounding_score < self.GROUNDING_THRESHOLD:
+                quality_issues.append({
+                    "type": "grounding_below_threshold",
+                    "message": f"Grounding score {grounding_score:.1f}% is below {self.GROUNDING_THRESHOLD}% threshold",
+                    "current_score": grounding_score,
+                    "required_score": self.GROUNDING_THRESHOLD,
+                    "contradicted_claims": post.get("contradictedClaims", 0),
+                    "unverified_claims": post.get("unverifiedClaims", 0)
+                })
+            
+            # Check SEO score
+            seo_score = post.get("seoScore", 0)
+            if seo_score < self.SEO_THRESHOLD:
+                quality_issues.append({
+                    "type": "seo_below_threshold", 
+                    "message": f"SEO score {seo_score:.1f}% is below {self.SEO_THRESHOLD}% threshold",
+                    "current_score": seo_score,
+                    "required_score": self.SEO_THRESHOLD,
+                    "action": "POST /api/v1/blog/posts/{slug}/seo/optimize"
+                })
+            
+            # Block publication if quality issues found
+            if quality_issues:
+                logger.warning(f"Blog Bouncer blocked publication of {slug}: {len(quality_issues)} quality issues")
+                return {
+                    "success": False,
+                    "error": "Blog Bouncer quality gate failed",
+                    "slug": slug,
+                    "title": post.get("title"),
+                    "quality_issues": quality_issues,
+                    "grounding_score": grounding_score,
+                    "seo_score": seo_score,
+                    "message": "Article does not meet publication standards. Fix issues and try again."
+                }
+        
+        # =====================================================================
+        # QUALITY GATE PASSED - Proceed with publication
+        # =====================================================================
+        
+        now = datetime.utcnow().isoformat() + "Z"
+        
+        # Update post status
+        post["status"] = "published"
+        post["publishedAt"] = now
+        post["updatedAt"] = now
+        post["scheduledFor"] = None
+        
+        # Save locally first
+        posts[post_index] = post
+        self._save_posts(posts)
+        
+        # Sync to public website (jasper-api)
+        sync_success = False
+        sync_error = None
+        
+        try:
+            sync_result = await self._sync_to_website(post)
+            sync_success = sync_result.get("success", False)
+            if not sync_success:
+                sync_error = sync_result.get("reason") or sync_result.get("error")
+        except Exception as e:
+            logger.error(f"Website sync failed for {slug}: {e}")
+            sync_error = str(e)
+        
+        # Log activity
+        self._log_activity(
+            entity_id=slug,
+            action="published",
+            details={
+                "auto_share": auto_share,
+                "grounding_score": post.get("groundingScore", 0),
+                "seo_score": post.get("seoScore", 0),
+                "synced_to_website": sync_success,
+                "sync_error": sync_error,
+                "forced": force
+            },
+            user_id=user_id
+        )
+        
+        # Notify Slack/Discord
+        url = f"https://jasperfinance.org/insights/{slug}"
+        await self._notify_slack_discord("blog_published", post["title"], url)
+        
+        # Auto-share to social if enabled
+        if auto_share:
+            await self.share_to_twitter(slug, user_id)
+            await self.share_to_linkedin(slug, user_id)
+        
+        return {
+            "success": True,
+            "post": post,
+            "synced_to_website": sync_success,
+            "sync_error": sync_error,
+            "grounding_score": post.get("groundingScore", 0),
+            "seo_score": post.get("seoScore", 0),
+            "message": f"Post published: {post.get('title')}"
+        }
+
+    async def _sync_to_website(self, post: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Sync published article to the public website (jasper-api).
+        
+        The website sync API has its own quality gate (70% threshold)
+        as a safety net, but we enforce stricter rules in the CRM.
+        """
+        portal_api_url = os.getenv("PORTAL_API_URL", "http://127.0.0.1:9003")
+        sync_api_key = os.getenv("SYNC_API_KEY", "jasper-sync-key-change-in-production")
+        
+        # Prepare payload for sync API
+        payload = {
+            "slug": post.get("slug"),
+            "title": post.get("title"),
+            "content": post.get("content"),
+            "excerpt": post.get("excerpt", ""),
+            "category": post.get("category", "DFI Insights"),
+            "tags": post.get("tags", []),
+            "author": post.get("author", "JASPER Research Team"),
+            "hero_image_url": post.get("heroImage"),
+            "published_at": post.get("publishedAt"),
+            "source_id": post.get("id"),
+            "grading": {
+                "overall_score": post.get("seoScore", 0),
+                "grounding_score": post.get("groundingScore", 0),
+                "grounding_verified": post.get("groundingVerified", False),
+            }
+        }
+        
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{portal_api_url}/api/blog/sync",
+                    json=payload,
+                    headers={
+                        "X-Sync-API-Key": sync_api_key,
+                        "Content-Type": "application/json"
+                    }
+                )
+                
+                if response.status_code in (200, 201):
+                    result = response.json()
+                    logger.info(f"Article synced to website: {post.get('slug')} - {result.get('action')}")
+                    return {"success": True, "action": result.get("action")}
+                else:
+                    error = response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text
+                    logger.error(f"Website sync failed: {response.status_code} - {error}")
+                    return {"success": False, "reason": str(error), "status_code": response.status_code}
+                    
+        except Exception as e:
+            logger.error(f"Website sync request failed: {e}")
+            return {"success": False, "reason": str(e)}
+
+
+    def unpublish_post(self, slug: str, user_id: str = "system") -> Optional[Dict[str, Any]]:
+        """Revert post to draft status."""
+        posts = self._load_posts()
+
+        for i, post in enumerate(posts):
+            if post.get("slug") == slug:
+                post["status"] = "draft"
+                post["publishedAt"] = None
+                post["updatedAt"] = datetime.utcnow().isoformat() + "Z"
+
+                posts[i] = post
+                self._save_posts(posts)
+
+                self._log_activity(
+                    entity_id=slug,
+                    action="unpublished",
+                    details={"title": post.get("title")},
+                    user_id=user_id
+                )
+
+                return post
+
+        return None
+
+    def schedule_post(
+        self,
+        slug: str,
+        scheduled_for: str,
+        auto_share_twitter: bool = False,
+        auto_share_linkedin: bool = False,
+        user_id: str = "system"
+    ) -> Optional[Dict[str, Any]]:
+        """Schedule a post for future publication."""
+        posts = self._load_posts()
+
+        for i, post in enumerate(posts):
+            if post.get("slug") == slug:
+                post["status"] = "scheduled"
+                post["scheduledFor"] = scheduled_for
+                post["updatedAt"] = datetime.utcnow().isoformat() + "Z"
+                # Store auto-share preferences for scheduler
+                post["autoShareOnPublish"] = auto_share_twitter or auto_share_linkedin
+                post["autoShareTwitter"] = auto_share_twitter
+                post["autoShareLinkedin"] = auto_share_linkedin
+
+                posts[i] = post
+                self._save_posts(posts)
+
+                self._log_activity(
+                    entity_id=slug,
+                    action="scheduled",
+                    details={
+                        "scheduled_for": scheduled_for,
+                        "auto_share_twitter": auto_share_twitter,
+                        "auto_share_linkedin": auto_share_linkedin
+                    },
+                    user_id=user_id
+                )
+
+                return post
+
+        return None
+
+    # =========================================================================
+    # SOCIAL SHARING
+    # =========================================================================
+
+    async def share_to_twitter(self, slug: str, user_id: str = "system") -> Dict[str, Any]:
+        """Share post to Twitter via jasper-social."""
+        post = self.get_post_by_slug(slug)
+        if not post:
+            return {"success": False, "error": "Post not found"}
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.social_api_url}/blog/share/twitter/{slug}",
+                    timeout=30.0
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    tweet_id = data.get("tweet_id")
+
+                    # Update post with Twitter status
+                    posts = self._load_posts()
+                    for p in posts:
+                        if p.get("slug") == slug:
+                            if "social" not in p:
+                                p["social"] = {}
+                            p["social"]["twitterShared"] = True
+                            p["social"]["twitterPostId"] = tweet_id
+                            p["social"]["twitterSharedAt"] = datetime.utcnow().isoformat() + "Z"
+                            break
+                    self._save_posts(posts)
+
+                    # Log activity
+                    self._log_activity(
+                        entity_id=slug,
+                        action="shared_twitter",
+                        details={"tweet_id": tweet_id},
+                        user_id=user_id
+                    )
+
+                    # Notify team
+                    tweet_url = f"https://twitter.com/i/web/status/{tweet_id}" if tweet_id else None
+                    await self._notify_slack_discord(
+                        "blog_shared_twitter",
+                        post["title"],
+                        tweet_url=tweet_url
+                    )
+
+                    return {"success": True, "tweet_id": tweet_id}
+                else:
+                    return {"success": False, "error": f"Social API error: {response.status_code}"}
+
+        except Exception as e:
+            logger.error(f"Twitter share failed: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def share_to_linkedin(self, slug: str, user_id: str = "system") -> Dict[str, Any]:
+        """Share post to LinkedIn via jasper-social."""
+        post = self.get_post_by_slug(slug)
+        if not post:
+            return {"success": False, "error": "Post not found"}
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.social_api_url}/blog/share/linkedin/{slug}",
+                    timeout=30.0
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    post_id = data.get("post_id")
+
+                    # Update post with LinkedIn status
+                    posts = self._load_posts()
+                    for p in posts:
+                        if p.get("slug") == slug:
+                            if "social" not in p:
+                                p["social"] = {}
+                            p["social"]["linkedinShared"] = True
+                            p["social"]["linkedinPostId"] = post_id
+                            p["social"]["linkedinSharedAt"] = datetime.utcnow().isoformat() + "Z"
+                            break
+                    self._save_posts(posts)
+
+                    # Log activity
+                    self._log_activity(
+                        entity_id=slug,
+                        action="shared_linkedin",
+                        details={"post_id": post_id},
+                        user_id=user_id
+                    )
+
+                    await self._notify_slack_discord("blog_shared_linkedin", post["title"])
+
+                    return {"success": True, "post_id": post_id}
+                else:
+                    return {"success": False, "error": f"Social API error: {response.status_code}"}
+
+        except Exception as e:
+            logger.error(f"LinkedIn share failed: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def get_social_preview(self, slug: str, platform: str) -> Dict[str, Any]:
+        """Get AI-generated social media preview."""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.social_api_url}/blog/preview/{platform}/{slug}",
+                    timeout=30.0
+                )
+
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    return {"success": False, "error": f"Preview API error: {response.status_code}"}
+
+        except Exception as e:
+            logger.error(f"Social preview failed: {e}")
+            return {"success": False, "error": str(e)}
+
+    # Alias for API compatibility
+    async def preview_social(self, slug: str, platform: str) -> Dict[str, Any]:
+        """Alias for get_social_preview."""
+        return await self.get_social_preview(slug, platform)
+
+    # =========================================================================
+    # AI CONTENT GENERATION
+    # =========================================================================
+
+    async def generate_post(
+        self,
+        topic: str,
+        category: str = "DFI Insights",
+        keywords: List[str] = None,
+        tone: str = "professional",
+        user_id: str = "system",
+        min_seo_score: int = 70,
+        use_ai_images: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Generate a new post using AI with auto-selected images.
+
+        Pipeline (per JASPER_CONTENT_QUALITY_PIPELINE.md):
+        1. Generate content via DeepSeek workers
+        2. Validate SEO score - REJECT if below min_seo_score (default 70%)
+        3. Generate AI images via Nano Banana Pro
+        4. Validate image quality - use fallback if below 70%
+        5. Create post as draft
+
+        Quality thresholds:
+        - Article SEO: 70% minimum
+        - Image quality: 70% minimum
+        """
+        try:
+            # Step 1: Generate content via content_service
+            generated = await content_service.generate_blog_post(
+                topic=topic,
+                category=category.lower().replace(" ", "-"),
+                seo_keywords=keywords,
+                tone=tone
+            )
+
+            if generated.get("error"):
+                return {"success": False, "error": generated["error"], "stage": "content_generation"}
+
+            # Step 2: Calculate SEO score and enforce threshold
+            temp_post = {
+                "title": generated.get("title", topic),
+                "content": generated.get("content", ""),
+                "excerpt": generated.get("excerpt", ""),
+                "slug": self._generate_slug(generated.get("title", topic)),
+                "seo": {
+                    "title": generated.get("seoTitle", ""),
+                    "description": generated.get("seoDescription", ""),
+                    "keywords": generated.get("tags", [])
+                }
+            }
+            seo_result = seo_scorer.calculate_score(temp_post)
+
+            if seo_result.score < min_seo_score:
+                logger.warning(f"Article rejected: SEO score {seo_result.score} < {min_seo_score}")
+                return {
+                    "success": False,
+                    "error": f"Article SEO score ({seo_result.score}%) below threshold ({min_seo_score}%)",
+                    "stage": "seo_validation",
+                    "seo_score": seo_result.score,
+                    "seo_details": seo_scorer.to_dict(seo_result)
+                }
+
+            # Step 3: Generate AI images (if enabled)
+            hero_image = None
+            image_info = None
+            image_source = "none"
+            library_image_id = None
+
+            if use_ai_images:
+                try:
+                    ai_result = await generate_article_images(
+                        title=generated.get("title", topic),
+                        excerpt=generated.get("excerpt", ""),
+                        content=generated.get("content", ""),
+                        category=category,
+                        slug=self._generate_slug(generated.get("title", topic)),
+                        max_images=2  # Hero (16:9) + Infographic
+                    )
+
+                    if ai_result.get("success") and ai_result.get("images"):
+                        # AI image passed quality validation (70%+)
+                        hero_image = ai_result["images"][0]["file_path"]
+                        image_info = ai_result["images"][0]
+                        image_source = "ai_generated"
+                        logger.info(f"AI image generated: quality={image_info.get('quality_score', 0)*100:.0f}%")
+
+                        # Add to image library with AI evaluation
+                        try:
+                            file_path = ai_result["images"][0].get("file_path")
+                            if file_path and Path(file_path).exists():
+                                with open(file_path, "rb") as f:
+                                    image_data = f.read()
+                                lib_image = await image_library.add_image(
+                                    image_data=image_data,
+                                    source="generated",
+                                    original_format="png",
+                                    context=f"{generated.get('title', topic)} - {category}",
+                                    prompt=image_info.get("prompt", ""),
+                                    category=category,
+                                )
+                                library_image_id = lib_image.id
+                                hero_image = lib_image.public_url  # Use library URL
+                                logger.info(f"Image added to library: {library_image_id}")
+                        except Exception as lib_err:
+                            logger.warning(f"Failed to add AI image to library: {lib_err}")
+                    else:
+                        # Log rejection reasons
+                        rejected = ai_result.get("rejected", [])
+                        for r in rejected:
+                            logger.warning(f"AI image rejected: score={r.get('score')}%, feedback={r.get('feedback')}")
+
+                except Exception as e:
+                    logger.error(f"AI image generation failed: {e}")
+
+            # Step 4: Fallback to stock photos if AI image failed
+            if not hero_image:
+                try:
+                    stock_result = await image_service.get_featured_image(topic, category)
+                    if stock_result.get("success") and stock_result.get("image"):
+                        stock_url = stock_result["image"]["large_url"]
+                        image_info = stock_result["image"]
+                        image_source = "stock_photo"
+                        logger.info(f"Using stock photo from {image_info.get('source')}")
+
+                        # Add stock photo to library with AI evaluation
+                        try:
+                            lib_image = await image_library.add_from_url(
+                                url=stock_url,
+                                source=image_info.get("source", "stock"),
+                                context=f"{generated.get('title', topic)} - {category}",
+                                attribution={
+                                    "photographer": image_info.get("photographer"),
+                                    "source_name": image_info.get("source"),
+                                    "source_url": image_info.get("page_url"),
+                                    "license": "Stock Photo License",
+                                },
+                            )
+                            library_image_id = lib_image.id
+                            hero_image = lib_image.public_url  # Use library URL (JPEG)
+                            logger.info(f"Stock image added to library: {library_image_id}")
+                        except Exception as lib_err:
+                            logger.warning(f"Failed to add stock image to library: {lib_err}")
+                            hero_image = stock_url  # Fallback to original URL
+                except Exception as e:
+                    logger.error(f"Stock image fetch failed: {e}")
+
+            # Step 5: Ultimate fallback - curated Unsplash URL
+            if not hero_image:
+                hero_image = get_fallback_image(category)
+                image_source = "fallback_stock"
+                logger.warning(f"Using fallback image for category: {category}")
+
+            # Step 6: Create the post as draft
+            post = self.create_post(
+                title=generated.get("title", topic),
+                content=generated.get("content", ""),
+                excerpt=generated.get("excerpt", ""),
+                category=category,
+                tags=generated.get("tags", keywords or []),
+                hero_image=_optimize_image_url(hero_image) if hero_image else "/images/blog/default.jpg",
+                seo={
+                    "title": generated.get("seoTitle", ""),
+                    "description": generated.get("seoDescription", ""),
+                    "keywords": generated.get("tags", []),
+                    "score": seo_result.score
+                },
+                user_id=user_id,
+                source="ai"
+            )
+
+            return {
+                "success": True,
+                "post": post,
+                "seo_score": seo_result.score,
+                "image_source": image_source,
+                "image_info": image_info,
+                "library_image_id": library_image_id,
+                "model_used": generated.get("model"),
+                "pipeline_stages": {
+                    "content_generation": "passed",
+                    "seo_validation": f"passed ({seo_result.score}%)",
+                    "image_generation": image_source,
+                    "image_library": "added" if library_image_id else "skipped"
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"AI generation failed: {e}")
+            return {"success": False, "error": str(e), "stage": "unknown"}
+
+    # =========================================================================
+    # SEO OPERATIONS
+    # =========================================================================
+
+    def get_seo_score(self, slug: str, focus_keyword: str = None) -> Dict[str, Any]:
+        """Get detailed SEO score for a post."""
+        post = self.get_post_by_slug(slug)
+        if not post:
+            return {"success": False, "error": "Post not found"}
+
+        result = seo_scorer.calculate_score(post, focus_keyword)
+        return {
+            "success": True,
+            "slug": slug,
+            **seo_scorer.to_dict(result)
+        }
+
+    async def optimize_seo(
+        self,
+        slug: str,
+        focus_keyword: str = None,
+        user_id: str = "system"
+    ) -> Dict[str, Any]:
+        """AI auto-optimize content for SEO."""
+        post = self.get_post_by_slug(slug)
+        if not post:
+            return {"success": False, "error": "Post not found"}
+
+        old_score = post.get("seo", {}).get("score", 0)
+
+        # Use content optimizer from content_service
+        from agents.seo_agent import content_optimizer
+
+        try:
+            keywords = [focus_keyword] if focus_keyword else post.get("seo", {}).get("keywords", [])
+
+            optimization = await content_optimizer.optimize_content(
+                content=post.get("content", ""),
+                target_keywords=keywords,
+                optimization_level="moderate"
+            )
+
+            if optimization.get("optimized_content"):
+                self.update_post(
+                    slug,
+                    {"content": optimization["optimized_content"]},
+                    user_id
+                )
+
+                # Recalculate score
+                updated_post = self.get_post_by_slug(slug)
+                new_score = updated_post.get("seo", {}).get("score", 0)
+
+                # Log and notify
+                self._log_activity(
+                    entity_id=slug,
+                    action="seo_optimized",
+                    details={"old_score": old_score, "new_score": new_score},
+                    user_id=user_id
+                )
+
+                await self._notify_slack_discord(
+                    "blog_seo_optimized",
+                    post["title"],
+                    old_score=old_score,
+                    new_score=new_score
+                )
+
+                return {
+                    "success": True,
+                    "old_score": old_score,
+                    "new_score": new_score,
+                    "improvements": optimization.get("changes", [])
+                }
+
+            return {"success": False, "error": "Optimization failed"}
+
+        except Exception as e:
+            logger.error(f"SEO optimization failed: {e}")
+            return {"success": False, "error": str(e)}
+
+    # =========================================================================
+    # RATINGS
+    # =========================================================================
+
+    def rate_post(self, slug: str, rating: int) -> Dict[str, Any]:
+        """Submit a star rating (1-5) for a post."""
+        if not 1 <= rating <= 5:
+            return {"success": False, "error": "Rating must be 1-5"}
+
+        posts = self._load_posts()
+
+        for post in posts:
+            if post.get("slug") == slug:
+                if "rating" not in post:
+                    post["rating"] = {"average": 0, "count": 0, "distribution": {"5": 0, "4": 0, "3": 0, "2": 0, "1": 0}}
+
+                # Update distribution
+                post["rating"]["distribution"][str(rating)] += 1
+                post["rating"]["count"] += 1
+
+                # Recalculate average
+                dist = post["rating"]["distribution"]
+                total_votes = post["rating"]["count"]
+                weighted_sum = sum(int(k) * v for k, v in dist.items())
+                post["rating"]["average"] = round(weighted_sum / total_votes, 1) if total_votes > 0 else 0
+
+                self._save_posts(posts)
+
+                return {
+                    "success": True,
+                    "rating": post["rating"]
+                }
+
+        return {"success": False, "error": "Post not found"}
+
+    def get_rating(self, slug: str) -> Dict[str, Any]:
+        """Get rating for a post."""
+        post = self.get_post_by_slug(slug)
+        if not post:
+            return {"success": False, "error": "Post not found"}
+
+        return {
+            "success": True,
+            "rating": post.get("rating", {"average": 0, "count": 0})
+        }
+
+    # =========================================================================
+    # STATISTICS
+    # =========================================================================
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Get blog statistics for dashboard."""
+        posts = self._load_posts()
+
+        # Count by status
+        by_status = {"published": 0, "draft": 0, "scheduled": 0, "archived": 0}
+        for post in posts:
+            status = post.get("status", "draft")
+            if status in by_status:
+                by_status[status] += 1
+
+        # Count by category
+        by_category = {}
+        for post in posts:
+            cat = post.get("category", "Uncategorized")
+            by_category[cat] = by_category.get(cat, 0) + 1
+
+        # Social stats
+        twitter_shared = sum(1 for p in posts if p.get("social", {}).get("twitterShared"))
+        linkedin_shared = sum(1 for p in posts if p.get("social", {}).get("linkedinShared"))
+
+        # SEO stats
+        scores = [p.get("seo", {}).get("score", 0) for p in posts if p.get("status") == "published"]
+        avg_seo = round(sum(scores) / len(scores), 1) if scores else 0
+        above_80 = sum(1 for s in scores if s >= 80)
+        need_optimization = sum(1 for s in scores if s < 60)
+
+        # Scheduled posts
+        scheduled = [p for p in posts if p.get("status") == "scheduled"]
+        scheduled.sort(key=lambda p: p.get("scheduledFor", ""))
+
+        return {
+            "total_posts": len(posts),
+            "by_status": by_status,
+            "by_category": by_category,
+            "social_stats": {
+                "twitter_shared": twitter_shared,
+                "linkedin_shared": linkedin_shared,
+            },
+            "seo_stats": {
+                "avg_score": avg_seo,
+                "posts_above_80": above_80,
+                "posts_need_optimization": need_optimization
+            },
+            "scheduled_upcoming": [
+                {"slug": p["slug"], "title": p["title"], "scheduledFor": p["scheduledFor"]}
+                for p in scheduled[:5]
+            ]
+        }
+
+
+# Singleton instance
+blog_service = BlogService()

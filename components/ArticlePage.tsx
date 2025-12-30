@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import { EmailCapturePopup } from './EmailCapturePopup';
@@ -22,13 +22,14 @@ import {
   Building2,
   LineChart,
   Lightbulb,
-  Newspaper
+  Newspaper,
+  Loader2
 } from 'lucide-react';
 import {
-  getPostBySlug,
-  getRelatedPosts,
-  type BlogPost
-} from '../data/blog';
+  getPostBySlugAsync,
+  getRelatedPostsAsync
+} from '../data/blogApi';
+import type { BlogPost } from '../data/blog';
 
 interface ArticlePageProps {
   slug: string;
@@ -338,9 +339,35 @@ const RelatedArticles: React.FC<{
   currentSlug: string;
   onNavigate?: (path: string) => void;
 }> = ({ currentSlug, onNavigate }) => {
-  const relatedPosts = getRelatedPosts(currentSlug, 3);
+  const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (relatedPosts.length === 0) return null;
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchRelated = async () => {
+      try {
+        const posts = await getRelatedPostsAsync(currentSlug, 3);
+        if (!cancelled) {
+          setRelatedPosts(posts);
+        }
+      } catch (err) {
+        console.error('Failed to fetch related posts:', err);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchRelated();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSlug]);
+
+  if (loading || relatedPosts.length === 0) return null;
 
   return (
     <div className="mt-16 pt-16 border-t border-white/10">
@@ -415,16 +442,66 @@ const ShareButtons: React.FC<{ post: BlogPost }> = ({ post }) => {
 };
 
 export const ArticlePage: React.FC<ArticlePageProps> = ({ slug, onBack, onNavigate }) => {
-  const post = getPostBySlug(slug);
+  const [post, setPost] = useState<BlogPost | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // Fetch post data from API
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPost = async () => {
+      setLoading(true);
+      setError(false);
+
+      try {
+        const fetchedPost = await getPostBySlugAsync(slug);
+        if (!cancelled) {
+          if (fetchedPost) {
+            setPost(fetchedPost);
+          } else {
+            setError(true);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch post:', err);
+        if (!cancelled) {
+          setError(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchPost();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-brand-navy text-brand-text font-sans flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-brand-emerald mx-auto mb-4 animate-spin" />
+          <p className="text-brand-muted">Loading article...</p>
+        </div>
+      </div>
+    );
+  }
 
   // 404 state
-  if (!post) {
+  if (error || !post) {
     return (
       <div className="min-h-screen bg-brand-navy text-brand-text font-sans flex items-center justify-center">
         <div className="text-center">
           <BookOpen className="w-16 h-16 text-gray-600 mx-auto mb-4" />
           <h1 className="text-2xl font-display font-bold text-white mb-2">Article Not Found</h1>
-          <p className="text-brand-muted mb-6">The article you're looking for doesn't exist.</p>
+          <p className="text-brand-muted mb-6">The article you're looking for doesn't exist or has been removed.</p>
           <button
             onClick={() => onNavigate?.('/insights')}
             className="inline-flex items-center gap-2 text-brand-emerald hover:underline"
