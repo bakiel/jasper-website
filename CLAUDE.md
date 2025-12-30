@@ -1,5 +1,40 @@
 # JASPER Financial Architecture - Claude Code Guide
 
+## CANONICAL SOURCE - EDIT ONLY THESE PATHS
+
+**CRITICAL: This is the ONLY correct location for JASPER code. DO NOT edit files elsewhere.**
+
+```
+CANONICAL PATHS (the ONLY files to edit):
+├── /Users/mac/Downloads/jasper-financial-architecture/          ← MARKETING SITE ROOT
+│   ├── components/Navbar.tsx                                    ← Main navigation
+│   ├── components/ServicesPage.tsx                              ← Service Matrix modal
+│   ├── components/SiteSearch.tsx                                ← Search component
+│   ├── components/Footer.tsx                                    ← Site footer
+│   ├── app/                                                     ← Page routes
+│   └── constants.ts                                             ← PACKAGES, SECTORS data
+│
+├── /Users/mac/Downloads/jasper-financial-architecture/jasper-crm/   ← CRM BACKEND
+│   ├── app/main.py                                              ← FastAPI app entry
+│   ├── routes/blog_public.py                                    ← Public blog API
+│   └── services/blog_service.py                                 ← Blog service
+│
+└── /Users/mac/Downloads/jasper-financial-architecture/jasper-portal-frontend/  ← ADMIN PORTAL
+    └── src/app/                                                 ← Next.js pages
+```
+
+**IGNORE THESE (old/redundant copies):**
+- `/Users/mac/Downloads/RESONANCE_BOOK_ONE/` - Different project
+- `/Users/mac/Downloads/resonance---book-one-sales-page*/` - Different project
+- `/Users/mac/Downloads/Pope Francis Project/` - Different project
+- `/Users/mac/Downloads/phalane-miracle-wheels*/` - Different project
+- Any path NOT starting with `/Users/mac/Downloads/jasper-financial-architecture/`
+
+**Git Remote:** `https://github.com/bakiel/jasper-website.git`
+**Last Protected Commit:** See `git log -1` for current state
+
+---
+
 ## Quick Reference
 - **Business**: JASPER™ DFI Financial Modeling ($45K-$750K packages)
 - **Owner**: Bakiel Nxumalo, Technical Director - Kutlwano Holdings
