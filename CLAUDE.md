@@ -1,65 +1,51 @@
-# JASPER Stabilization Mode
+# JASPER Development Environment
 
-## 🎯 CURRENT MISSION: STABILIZE (NO NEW FEATURES)
+## Auto-Load Context
+Read these before any task:
+- docs/FEATURE_INDEX.md
+- jasper-crm/docs/ARCHITECTURE.md
+- jasper-crm/docs/RUNBOOK.md
 
-Read `STABILIZATION_PROMPT.md` for full details.
+## Infrastructure
+- **VPS:** root@72.61.201.237
+- **CRM API:** port 8001
+- **Marketing Site:** port 3005
+- **Backups:** /root/backups/
 
-## Quick Reference
+## Agent Tools
 
-### VPS Access
+### Ralph Wiggum (Autonomous Loop)
+```
+/ralph-wiggum:ralph-loop "task" --max-iterations 50 --promise "done criteria"
+```
+
+### Sub-Agents (Parallel)
+```
+Use Task() to spawn parallel agents:
+- Task("agent-1", "task description")
+- Task("agent-2", "task description")
+```
+
+### Stop Hooks
+Configured in .claude/settings.local.json - stops when TODO.md contains COMPLETE
+
+## Rules
+1. Backup before changes
+2. Test before deploy
+3. Small changes, verify each
+4. Check health after deploy
+
+## Quick Commands
 ```bash
-ssh root@72.61.201.237
+# Deploy
+ssh root@72.61.201.237 '/opt/jasper-crm/scripts/deploy.sh'
+
+# Health
+ssh root@72.61.201.237 'curl -s http://localhost:8001/status'
+
+# Logs
+ssh root@72.61.201.237 'journalctl -u jasper-crm -f'
+
+# Tests
+ssh root@72.61.201.237 '/opt/jasper-crm/scripts/run_tests.sh'
 ```
-
-### Services
-```bash
-systemctl status jasper-crm
-systemctl status jasper-celery-worker
-systemctl status jasper-main-site
-journalctl -u jasper-crm -f  # Live logs
-```
-
-### Key Paths (VPS)
-```
-/opt/jasper-crm/           # CRM backend
-/opt/jasper-crm/data/      # JSON data files
-/opt/jasper-main-site/     # Marketing site
-/root/backups/             # Backup storage
-/var/log/nginx/            # Nginx logs
-```
-
-### Key Paths (Local)
-```
-~/Downloads/jasper-financial-architecture/
-├── jasper-crm/            # Backend code
-├── jasper-portal-frontend/ # Admin portal
-├── src/                   # Marketing site
-└── STABILIZATION_PROMPT.md # Full mission brief
-```
-
-### Deploy Commands
-```bash
-# Sync single file
-scp jasper-crm/file.py root@72.61.201.237:/opt/jasper-crm/
-
-# Restart service
-ssh root@72.61.201.237 'systemctl restart jasper-crm'
-
-# Check health
-curl https://api.jasperfinance.org/api/v1/health
-```
-
-## Phase Checklist
-
-- [ ] Phase 1: Backups + Health checks
-- [ ] Phase 2: Monitoring + Alerts
-- [ ] Phase 3: Tests
-- [ ] Phase 4: Documentation
-- [ ] Phase 5: CI/CD
-
-## RULES
-
-1. **BACKUP FIRST** before any change
-2. **NO NEW FEATURES** - stabilization only
-3. **TEST BEFORE DEPLOY**
-4. **SMALL CHANGES** - one at a time
