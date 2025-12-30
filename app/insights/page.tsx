@@ -214,18 +214,20 @@ const ArticleCard: React.FC<{
 }> = ({ post, onNavigate, size = 'small' }) => {
   const isLarge = size === 'large';
   const isMedium = size === 'medium';
+  const isDraft = post.status === 'draft';
 
   return (
     <motion.article
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group cursor-pointer h-full"
+      className={`group cursor-pointer h-full ${isDraft ? 'opacity-75' : ''}`}
       onClick={() => onNavigate?.(`/insights/${post.slug}`)}
     >
       <div className={`
         relative overflow-hidden rounded-2xl bg-white/5 border border-white/10
         hover:border-brand-emerald/30 transition-all duration-300 h-full
         ${isLarge ? 'lg:flex lg:items-stretch' : ''}
+        ${isDraft ? 'border-amber-500/30' : ''}
       `}>
         {/* Hero Image */}
         <div className={`
@@ -245,11 +247,16 @@ const ArticleCard: React.FC<{
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-          <div className="absolute top-4 left-4">
+          <div className="absolute top-4 left-4 flex gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-emerald/20 text-brand-emerald text-xs font-semibold backdrop-blur-sm">
               {categoryIcons[post.category]}
               {post.category}
             </span>
+            {isDraft && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-semibold backdrop-blur-sm">
+                DRAFT
+              </span>
+            )}
           </div>
         </div>
 
@@ -287,9 +294,9 @@ const FeaturedSection: React.FC<{
   posts: BlogPost[];
   onNavigate?: (path: string) => void;
 }> = ({ posts, onNavigate }) => {
-  // Filter for high SEO score posts (75%+) and sort by recency
+  // Filter for PUBLISHED posts with high SEO score (75%+), sorted by recency
   const eligible = posts
-    .filter(p => (p.seo?.score || 75) >= 70) // Default to 75 if no SEO score
+    .filter(p => p.status === 'published' && (p.seo?.score || 75) >= 70)
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 
   if (eligible.length < 3) return null;
@@ -406,12 +413,16 @@ const InsightsPage: React.FC<InsightsPageProps> = ({ onNavigate }) => {
       if (data.success !== false) {
         // Handle both array and {posts: []} formats
         const posts = Array.isArray(data) ? data : (data.posts || []);
-        const publishedPosts = posts
-          .filter((p: BlogPost) => p.status === 'published')
-          .sort((a: BlogPost, b: BlogPost) =>
-            new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-          );
-        setAllPosts(publishedPosts);
+        // Show ALL posts (published + drafts), sorted: published first by date, then drafts by date
+        const sortedPosts = posts.sort((a: BlogPost, b: BlogPost) => {
+          // Published posts come before drafts
+          if (a.status === 'published' && b.status !== 'published') return -1;
+          if (a.status !== 'published' && b.status === 'published') return 1;
+          // Within same status, sort by date (newest first)
+          return new Date(b.publishedAt || b.updatedAt || 0).getTime() -
+                 new Date(a.publishedAt || a.updatedAt || 0).getTime();
+        });
+        setAllPosts(sortedPosts);
       } else {
         throw new Error('API returned unsuccessful response');
       }
