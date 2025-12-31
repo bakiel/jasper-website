@@ -1,5 +1,60 @@
 # JASPER Development Environment
 
+## 🏢 PRODUCTION STANDARDS
+
+**Every new feature MUST include these before it's considered complete:**
+
+### 1. Health Check Integration
+```python
+# Add to health endpoint or create feature-specific check
+"new_feature": {
+    "status": "healthy" | "degraded" | "down",
+    "latency_ms": <response_time>
+}
+```
+
+### 2. Test Coverage
+```python
+# Add to tests/test_live_api.py
+def test_new_feature():
+    response = requests.get(f"{BASE}/api/v1/new-feature")
+    assert response.status_code == 200
+```
+
+### 3. Documentation Updates
+- `FEATURE_INDEX.md` - Add under appropriate section
+- `WORKING_FEATURES.md` - Add to protected list
+- `ARCHITECTURE.md` - If new service/integration
+
+### 4. Error Handling + Logging
+```python
+import logging
+logger = logging.getLogger(__name__)
+
+try:
+    result = do_feature()
+    logger.info(f"Feature executed: {result}")
+    return result
+except Exception as e:
+    logger.error(f"Feature failed: {e}")
+    return {"error": "Feature unavailable"}, 503
+```
+
+### 5. Completion Checklist
+After building ANY feature, paste this in commit message:
+```
+- [ ] Health check added/updated
+- [ ] Test added (test_live_api.py)
+- [ ] FEATURE_INDEX.md updated
+- [ ] WORKING_FEATURES.md updated  
+- [ ] Error handling + logging
+- [ ] All tests pass: scripts/run_tests.sh
+```
+
+**Feature is NOT done until all boxes checked.**
+
+---
+
 ## ⚠️ PRIME DIRECTIVE
 **PRESERVE WHAT WORKS. Iterate, don't rebuild.**
 
